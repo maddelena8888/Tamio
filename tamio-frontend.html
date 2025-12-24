@@ -905,6 +905,7 @@
                     <div class="chart-tabs" style="margin-bottom: 20px;">
                         <button class="chart-tab active" id="clientsTab" onclick="showDataTab('clients')">👥 Clients</button>
                         <button class="chart-tab" id="expensesTab" onclick="showDataTab('expenses')">💸 Expenses</button>
+                        <button class="chart-tab" id="integrationsTab" onclick="showDataTab('integrations')">🔗 Integrations</button>
                     </div>
 
                     <!-- Clients Management -->
@@ -1014,6 +1015,77 @@
                             </div>
 
                             <button class="btn btn-add" onclick="addManagedExpense()">+ Add Expense</button>
+                        </div>
+                    </div>
+
+                    <!-- Integrations Section -->
+                    <div id="manageIntegrationsSection" style="display: none;">
+                        <div id="xeroIntegration" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                                <img src="https://www.xero.com/content/dam/xero/pilot-images/cta/xero-logo.svg" alt="Xero" style="height: 40px;" onerror="this.style.display='none'">
+                                <div>
+                                    <h4 style="margin: 0;">Xero Accounting</h4>
+                                    <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Import clients and invoices from Xero</p>
+                                </div>
+                            </div>
+
+                            <div id="xeroStatus" style="padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #e9ecef;">
+                                <span id="xeroStatusText">Checking connection status...</span>
+                            </div>
+
+                            <div id="xeroNotConnected">
+                                <p style="color: #666; margin-bottom: 15px;">
+                                    Connect your Xero account to automatically import:
+                                </p>
+                                <ul style="color: #666; margin-bottom: 20px; padding-left: 20px;">
+                                    <li>Customers → Clients with payment history</li>
+                                    <li>Invoices → Cash inflow events</li>
+                                    <li>Bills → Cash outflow events</li>
+                                    <li>Repeating invoices → Retainer detection</li>
+                                </ul>
+                                <button class="btn btn-primary" onclick="connectXero()" style="background: #13B5EA;">
+                                    🔗 Connect to Xero
+                                </button>
+                            </div>
+
+                            <div id="xeroConnected" style="display: none;">
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button class="btn btn-primary" onclick="previewXeroData()" style="background: #13B5EA;">
+                                        👁️ Preview Data
+                                    </button>
+                                    <button class="btn btn-add" onclick="syncXeroData()">
+                                        🔄 Sync Now
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="viewXeroSyncHistory()">
+                                        📋 Sync History
+                                    </button>
+                                    <button class="btn btn-remove" onclick="disconnectXero()">
+                                        Disconnect
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Xero Preview Modal Content Area -->
+                        <div id="xeroPreviewArea" style="display: none; background: white; border: 2px solid #13B5EA; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="margin: 0;">📊 Xero Data Preview</h4>
+                                <button onclick="hideXeroPreview()" style="background: none; border: none; font-size: 20px; cursor: pointer;">×</button>
+                            </div>
+                            <div id="xeroPreviewContent">Loading...</div>
+                            <div style="margin-top: 20px; text-align: right;">
+                                <button class="btn btn-secondary" onclick="hideXeroPreview()">Cancel</button>
+                                <button class="btn btn-add" onclick="syncXeroData()">Import This Data</button>
+                            </div>
+                        </div>
+
+                        <!-- Sync History Area -->
+                        <div id="xeroHistoryArea" style="display: none; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="margin: 0;">📋 Sync History</h4>
+                                <button onclick="hideXeroHistory()" style="background: none; border: none; font-size: 20px; cursor: pointer;">×</button>
+                            </div>
+                            <div id="xeroHistoryContent">Loading...</div>
                         </div>
                     </div>
 
@@ -1965,15 +2037,21 @@
         function showDataTab(tab) {
             document.getElementById('clientsTab').classList.remove('active');
             document.getElementById('expensesTab').classList.remove('active');
+            document.getElementById('integrationsTab').classList.remove('active');
             document.getElementById('manageClientsSection').style.display = 'none';
             document.getElementById('manageExpensesSection').style.display = 'none';
+            document.getElementById('manageIntegrationsSection').style.display = 'none';
 
             if (tab === 'clients') {
                 document.getElementById('clientsTab').classList.add('active');
                 document.getElementById('manageClientsSection').style.display = 'block';
-            } else {
+            } else if (tab === 'expenses') {
                 document.getElementById('expensesTab').classList.add('active');
                 document.getElementById('manageExpensesSection').style.display = 'block';
+            } else if (tab === 'integrations') {
+                document.getElementById('integrationsTab').classList.add('active');
+                document.getElementById('manageIntegrationsSection').style.display = 'block';
+                checkXeroStatus();
             }
         }
 
