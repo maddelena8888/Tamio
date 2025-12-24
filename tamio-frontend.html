@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tamio - Cash Flow Onboarding</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .progress-bar::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 0;
+        }
+
+        .progress-step {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #999;
+            position: relative;
+            z-index: 1;
+        }
+
+        .progress-step.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .progress-step.completed {
+            background: #4caf50;
+            color: white;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            margin-right: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-add {
+            background: #4caf50;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn-add:hover {
+            background: #45a049;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .card-title {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .btn-remove {
+            background: #f44336;
+            color: white;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-remove:hover {
+            background: #da190b;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .forecast-result {
+            margin-top: 30px;
+        }
+
+        .forecast-week {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .forecast-week.negative {
+            border-left-color: #f44336;
+        }
+
+        .forecast-summary {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .summary-stat {
+            display: inline-block;
+            margin-right: 30px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .total-display {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            color: #2e7d32;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 30px 0;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .chart-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .chart-tab {
+            padding: 10px 20px;
+            background: #f5f5f5;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .chart-tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .forecast-week {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .forecast-week:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .forecast-week.negative {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+
+        .forecast-week.negative:hover {
+            background: #ffcdd2;
+        }
+
+        .week-details {
+            display: none;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .week-details.expanded {
+            display: block;
+        }
+
+        .event-item {
+            padding: 8px;
+            background: white;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .event-in {
+            border-left: 3px solid #4caf50;
+        }
+
+        .event-out {
+            border-left: 3px solid #f44336;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .btn-export {
+            padding: 10px 20px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-export:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tamio Cash Flow Onboarding</h1>
+        <p class="subtitle">Set up your 13-week cash flow forecast in 3 simple steps</p>
+
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+            <div class="progress-step active" id="step1">1</div>
+            <div class="progress-step" id="step2">2</div>
+            <div class="progress-step" id="step3">3</div>
+        </div>
+
+        <!-- Page 1: Cash Position -->
+        <div class="page active" id="page1">
+            <h2>Page 1: Current Cash Position</h2>
+            <p class="subtitle">Add your current cash accounts</p>
+
+            <div id="accountsList"></div>
+
+            <div class="form-group">
+                <label>Account Name</label>
+                <input type="text" id="accountName" placeholder="e.g., Business Checking">
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label>Balance</label>
+                    <input type="number" id="accountBalance" placeholder="100000" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Currency</label>
+                    <select id="accountCurrency">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>As of Date</label>
+                <input type="date" id="accountDate" value="">
+            </div>
+
+            <button class="btn btn-add" onclick="addAccount()">+ Add Account</button>
+
+            <div id="totalCash" class="total-display hidden">
+                Total Starting Cash: $<span id="totalAmount">0</span>
+            </div>
+
+            <div class="buttons">
+                <div></div>
+                <button class="btn btn-primary" onclick="nextPage()">Next: Add Clients →</button>
+            </div>
+        </div>
+
+        <!-- Page 2: Clients (Cash In) -->
+        <div class="page" id="page2">
+            <h2>Page 2: Cash In (Clients)</h2>
+            <p class="subtitle">Add your revenue sources</p>
+
+            <div id="clientsList"></div>
+
+            <div class="form-group">
+                <label>Client Name</label>
+                <input type="text" id="clientName" placeholder="e.g., Acme Corp">
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label>Client Type</label>
+                    <select id="clientType" onchange="updateBillingConfig()">
+                        <option value="retainer">Retainer</option>
+                        <option value="project">Project</option>
+                        <option value="usage">Usage-Based</option>
+                        <option value="mixed">Mixed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Currency</label>
+                    <select id="clientCurrency">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="billingConfigSection">
+                <!-- Dynamic billing config will be inserted here -->
+            </div>
+
+            <button class="btn btn-add" onclick="addClient()">+ Add Client</button>
+
+            <div class="buttons">
+                <button class="btn btn-secondary" onclick="prevPage()">← Back</button>
+                <button class="btn btn-primary" onclick="nextPage()">Next: Add Expenses →</button>
+            </div>
+        </div>
+
+        <!-- Page 3: Expenses (Cash Out) -->
+        <div class="page" id="page3">
+            <h2>Page 3: Cash Out (Expenses)</h2>
+            <p class="subtitle">Add your expense buckets</p>
+
+            <div id="expensesList"></div>
+
+            <div class="form-group">
+                <label>Expense Name</label>
+                <input type="text" id="expenseName" placeholder="e.g., Payroll">
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="expenseCategory">
+                        <option value="payroll">Payroll</option>
+                        <option value="rent">Rent</option>
+                        <option value="contractors">Contractors</option>
+                        <option value="software">Software</option>
+                        <option value="marketing">Marketing</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="expenseType">
+                        <option value="fixed">Fixed</option>
+                        <option value="variable">Variable</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label>Monthly Amount</label>
+                    <input type="number" id="expenseAmount" placeholder="25000" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select id="expensePriority">
+                        <option value="essential">Essential</option>
+                        <option value="important" selected>Important</option>
+                        <option value="discretionary">Discretionary</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn btn-add" onclick="addExpense()">+ Add Expense Bucket</button>
+
+            <div class="buttons">
+                <button class="btn btn-secondary" onclick="prevPage()">← Back</button>
+                <button class="btn btn-primary" onclick="submitOnboarding()">Generate Forecast 🚀</button>
+            </div>
+        </div>
+
+        <!-- Page 4: Results -->
+        <div class="page" id="page4">
+            <div id="loadingSection" class="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 20px;">Generating your 13-week forecast...</p>
+            </div>
+
+            <div id="resultSection" class="hidden">
+                <h2>Your 13-Week Cash Flow Forecast</h2>
+                <div id="forecastSummary"></div>
+
+                <!-- Chart Tabs -->
+                <div class="chart-tabs">
+                    <button class="chart-tab active" onclick="showChart('balance')">💰 Cash Balance</button>
+                    <button class="chart-tab" onclick="showChart('cashflow')">📊 Cash Flow</button>
+                </div>
+
+                <!-- Chart Container -->
+                <div class="chart-container">
+                    <canvas id="forecastChart"></canvas>
+                </div>
+
+                <!-- Export Buttons -->
+                <div class="export-buttons">
+                    <button class="btn-export" onclick="exportCSV()">📥 Download CSV</button>
+                    <button class="btn-export" onclick="exportJSON()">📄 Download JSON</button>
+                </div>
+
+                <!-- Week Details -->
+                <h3 style="margin-top: 30px; margin-bottom: 15px;">Week-by-Week Breakdown</h3>
+                <div id="forecastWeeks"></div>
+
+                <!-- Scenario Analysis Section -->
+                <div id="scenarioSection" style="margin-top: 50px; border-top: 2px solid #667eea; padding-top: 30px;">
+                    <h2>🎯 Scenario Analysis (What-If Modeling)</h2>
+                    <p style="color: #666; margin-bottom: 20px;">Explore "what if" scenarios to understand how decisions might impact your cash flow.</p>
+
+                    <button class="btn btn-primary" onclick="showScenarioBuilder()" style="margin-bottom: 20px;">+ Create New Scenario</button>
+
+                    <!-- Scenario Builder (Hidden initially) -->
+                    <div id="scenarioBuilder" class="hidden" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <h3>Create Scenario</h3>
+
+                        <div class="form-group">
+                            <label>Scenario Name</label>
+                            <input type="text" id="scenarioName" placeholder="e.g., 'Hire 2 Engineers'">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Scenario Type</label>
+                            <select id="scenarioType" onchange="updateScenarioFields()">
+                                <option value="">-- Select Type --</option>
+                                <optgroup label="Cash In">
+                                    <option value="payment_delay">Payment Delay</option>
+                                    <option value="client_loss">Client Loss</option>
+                                    <option value="client_gain">New Client</option>
+                                    <option value="client_change">Client Change (Upsell/Downsell)</option>
+                                </optgroup>
+                                <optgroup label="Cash Out">
+                                    <option value="hiring">Hiring</option>
+                                    <option value="firing">Firing</option>
+                                    <option value="increased_expense">Increase Expense</option>
+                                    <option value="decreased_expense">Decrease Expense</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div id="scenarioParameters" style="margin-top: 20px;">
+                            <!-- Dynamic fields based on scenario type -->
+                        </div>
+
+                        <div class="buttons">
+                            <button class="btn btn-secondary" onclick="hideScenarioBuilder()">Cancel</button>
+                            <button class="btn btn-primary" onclick="buildScenario()">Build Scenario</button>
+                        </div>
+                    </div>
+
+                    <!-- Active Scenarios List -->
+                    <div id="scenariosList">
+                        <!-- Will be populated with scenarios -->
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="startOver()" style="margin-top: 30px;">Start Over</button>
+            </div>
+
+            <div id="errorSection" class="hidden">
+                <div class="error">
+                    <strong>Error:</strong> <span id="errorMessage"></span>
+                </div>
+                <button class="btn btn-secondary" onclick="prevPage()">← Go Back</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = 'http://localhost:8000/api';
+
+        // State
+        let currentPage = 1;
+        let userData = {
+            email: `user${Date.now()}@example.com`,
+            base_currency: 'USD'
+        };
+        let accounts = [];
+        let clients = [];
+        let expenses = [];
+
+        // Set today's date as default
+        document.getElementById('accountDate').valueAsDate = new Date();
+
+        // Initialize billing config
+        updateBillingConfig();
+
+        // Navigation
+        function nextPage() {
+            if (currentPage === 1 && accounts.length === 0) {
+                alert('Please add at least one cash account');
+                return;
+            }
+
+            document.getElementById(`page${currentPage}`).classList.remove('active');
+            document.getElementById(`step${currentPage}`).classList.remove('active');
+            document.getElementById(`step${currentPage}`).classList.add('completed');
+
+            currentPage++;
+
+            document.getElementById(`page${currentPage}`).classList.add('active');
+            document.getElementById(`step${currentPage}`).classList.add('active');
+        }
+
+        function prevPage() {
+            document.getElementById(`page${currentPage}`).classList.remove('active');
+            document.getElementById(`step${currentPage}`).classList.remove('active');
+
+            currentPage--;
+
+            document.getElementById(`page${currentPage}`).classList.add('active');
+            document.getElementById(`step${currentPage}`).classList.remove('completed');
+            document.getElementById(`step${currentPage}`).classList.add('active');
+        }
+
+        // Page 1: Cash Accounts
+        function addAccount() {
+            const name = document.getElementById('accountName').value;
+            const balance = parseFloat(document.getElementById('accountBalance').value);
+            const currency = document.getElementById('accountCurrency').value;
+            const asOfDate = document.getElementById('accountDate').value;
+
+            if (!name || !balance || !asOfDate) {
+                alert('Please fill in all account fields');
+                return;
+            }
+
+            accounts.push({
+                account_name: name,
+                balance: balance,
+                currency: currency,
+                as_of_date: asOfDate
+            });
+
+            renderAccounts();
+
+            // Clear form
+            document.getElementById('accountName').value = '';
+            document.getElementById('accountBalance').value = '';
+        }
+
+        function removeAccount(index) {
+            accounts.splice(index, 1);
+            renderAccounts();
+        }
+
+        function renderAccounts() {
+            const list = document.getElementById('accountsList');
+            const total = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+
+            list.innerHTML = accounts.map((acc, i) => `
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">${acc.account_name}</span>
+                        <button class="btn btn-remove" onclick="removeAccount(${i})">Remove</button>
+                    </div>
+                    <div>${acc.currency} ${acc.balance.toLocaleString()} • As of ${acc.as_of_date}</div>
+                </div>
+            `).join('');
+
+            if (accounts.length > 0) {
+                document.getElementById('totalCash').classList.remove('hidden');
+                document.getElementById('totalAmount').textContent = total.toLocaleString();
+            } else {
+                document.getElementById('totalCash').classList.add('hidden');
+            }
+        }
+
+        // Page 2: Clients
+        function updateBillingConfig() {
+            const type = document.getElementById('clientType').value;
+            const section = document.getElementById('billingConfigSection');
+
+            let html = '';
+
+            if (type === 'retainer') {
+                html = `
+                    <div class="row">
+                        <div class="form-group">
+                            <label>Billing Frequency</label>
+                            <select id="billingFrequency">
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Amount</label>
+                            <input type="number" id="billingAmount" placeholder="10000" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Terms</label>
+                        <select id="paymentTerms">
+                            <option value="net_7">Net 7</option>
+                            <option value="net_14">Net 14</option>
+                            <option value="net_30">Net 30</option>
+                        </select>
+                    </div>
+                `;
+            } else if (type === 'project') {
+                html = `
+                    <div class="form-group">
+                        <label>Total Project Value</label>
+                        <input type="number" id="projectValue" placeholder="50000" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Milestone 1: Deposit</label>
+                        <div class="row">
+                            <input type="number" id="milestone1Amount" placeholder="Amount" step="0.01">
+                            <input type="date" id="milestone1Date">
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'usage') {
+                html = `
+                    <div class="row">
+                        <div class="form-group">
+                            <label>Settlement Frequency</label>
+                            <select id="settlementFrequency">
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Typical Amount</label>
+                            <input type="number" id="typicalAmount" placeholder="5000" step="0.01">
+                        </div>
+                    </div>
+                `;
+            }
+
+            section.innerHTML = html;
+        }
+
+        function addClient() {
+            const name = document.getElementById('clientName').value;
+            const type = document.getElementById('clientType').value;
+            const currency = document.getElementById('clientCurrency').value;
+
+            if (!name) {
+                alert('Please enter client name');
+                return;
+            }
+
+            let billingConfig = {};
+
+            if (type === 'retainer') {
+                const amount = parseFloat(document.getElementById('billingAmount').value);
+                if (!amount) {
+                    alert('Please enter billing amount');
+                    return;
+                }
+                billingConfig = {
+                    frequency: document.getElementById('billingFrequency').value,
+                    billing_day: "start_of_month",
+                    amount: amount,
+                    payment_terms: document.getElementById('paymentTerms').value
+                };
+            } else if (type === 'project') {
+                const totalValue = parseFloat(document.getElementById('projectValue').value);
+                const milestone1Amount = parseFloat(document.getElementById('milestone1Amount').value);
+                const milestone1Date = document.getElementById('milestone1Date').value;
+
+                if (!totalValue || !milestone1Amount || !milestone1Date) {
+                    alert('Please fill in project details');
+                    return;
+                }
+
+                billingConfig = {
+                    total_value: totalValue,
+                    payment_structure: "milestone",
+                    milestones: [{
+                        name: "Deposit",
+                        amount: milestone1Amount,
+                        expected_date: milestone1Date,
+                        trigger_type: "date",
+                        payment_terms: "net_7"
+                    }]
+                };
+            } else if (type === 'usage') {
+                const amount = parseFloat(document.getElementById('typicalAmount').value);
+                if (!amount) {
+                    alert('Please enter typical amount');
+                    return;
+                }
+                billingConfig = {
+                    settlement_frequency: document.getElementById('settlementFrequency').value,
+                    typical_amount: amount,
+                    payment_terms: "net_30"
+                };
+            }
+
+            clients.push({
+                name: name,
+                client_type: type,
+                currency: currency,
+                status: "active",
+                payment_behavior: "on_time",
+                churn_risk: "low",
+                scope_risk: "low",
+                billing_config: billingConfig
+            });
+
+            renderClients();
+
+            // Clear form
+            document.getElementById('clientName').value = '';
+        }
+
+        function removeClient(index) {
+            clients.splice(index, 1);
+            renderClients();
+        }
+
+        function renderClients() {
+            const list = document.getElementById('clientsList');
+
+            list.innerHTML = clients.map((client, i) => `
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">${client.name}</span>
+                        <button class="btn btn-remove" onclick="removeClient(${i})">Remove</button>
+                    </div>
+                    <div>Type: ${client.client_type} • ${client.currency}</div>
+                </div>
+            `).join('');
+        }
+
+        // Page 3: Expenses
+        function addExpense() {
+            const name = document.getElementById('expenseName').value;
+            const category = document.getElementById('expenseCategory').value;
+            const type = document.getElementById('expenseType').value;
+            const amount = parseFloat(document.getElementById('expenseAmount').value);
+            const priority = document.getElementById('expensePriority').value;
+
+            if (!name || !amount) {
+                alert('Please fill in expense details');
+                return;
+            }
+
+            expenses.push({
+                name: name,
+                category: category,
+                bucket_type: type,
+                monthly_amount: amount,
+                currency: 'USD',
+                priority: priority,
+                is_stable: true
+            });
+
+            renderExpenses();
+
+            // Clear form
+            document.getElementById('expenseName').value = '';
+            document.getElementById('expenseAmount').value = '';
+        }
+
+        function removeExpense(index) {
+            expenses.splice(index, 1);
+            renderExpenses();
+        }
+
+        function renderExpenses() {
+            const list = document.getElementById('expensesList');
+
+            list.innerHTML = expenses.map((expense, i) => `
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">${expense.name}</span>
+                        <button class="btn btn-remove" onclick="removeExpense(${i})">Remove</button>
+                    </div>
+                    <div>${expense.category} • $${expense.monthly_amount.toLocaleString()}/month • Priority: ${expense.priority}</div>
+                </div>
+            `).join('');
+        }
+
+        // Submit Onboarding
+        async function submitOnboarding() {
+            // Show loading page
+            document.getElementById('page3').classList.remove('active');
+            document.getElementById('page4').classList.add('active');
+            document.getElementById('loadingSection').classList.remove('hidden');
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('errorSection').classList.add('hidden');
+
+            try {
+                // Submit onboarding data
+                const response = await fetch(`${API_BASE}/data/onboarding`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user: userData,
+                        cash_position: accounts,
+                        clients: clients,
+                        expenses: expenses
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Validation error:', errorData);
+                    throw new Error(`API error: ${response.statusText} - ${JSON.stringify(errorData.detail || errorData)}`);
+                }
+
+                const onboardingResult = await response.json();
+                const userId = onboardingResult.user.id;
+
+                // Store user ID globally for scenario analysis
+                currentUserId = userId;
+
+                // Get forecast
+                const forecastResponse = await fetch(`${API_BASE}/forecast?user_id=${userId}`);
+
+                if (!forecastResponse.ok) {
+                    throw new Error(`Forecast API error: ${forecastResponse.statusText}`);
+                }
+
+                const forecast = await forecastResponse.json();
+
+                // Display results
+                displayForecast(forecast);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loadingSection').classList.add('hidden');
+                document.getElementById('errorSection').classList.remove('hidden');
+                document.getElementById('errorMessage').textContent = error.message;
+            }
+        }
+
+        // Global variables for chart
+        let forecastData = null;
+        let currentChart = null;
+        let currentChartType = 'balance';
+
+        function displayForecast(forecast) {
+            document.getElementById('loadingSection').classList.add('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
+
+            // Store forecast data globally
+            forecastData = forecast;
+
+            // Summary
+            const summary = forecast.summary;
+            document.getElementById('forecastSummary').innerHTML = `
+                <div class="forecast-summary">
+                    <h3 style="margin-bottom: 15px;">Summary</h3>
+                    <div class="summary-stat">
+                        <strong>Starting Cash:</strong> $${parseFloat(forecast.starting_cash).toLocaleString()}
+                    </div>
+                    <div class="summary-stat">
+                        <strong>Total Cash In:</strong> $${parseFloat(summary.total_cash_in).toLocaleString()}
+                    </div>
+                    <div class="summary-stat">
+                        <strong>Total Cash Out:</strong> $${parseFloat(summary.total_cash_out).toLocaleString()}
+                    </div>
+                    <div class="summary-stat">
+                        <strong>Lowest Cash:</strong> $${parseFloat(summary.lowest_cash_amount).toLocaleString()} (Week ${summary.lowest_cash_week})
+                    </div>
+                    <div class="summary-stat">
+                        <strong>Runway:</strong> ${summary.runway_weeks} weeks
+                    </div>
+                </div>
+            `;
+
+            // Create chart
+            createChart('balance');
+
+            // Weeks with expand/collapse
+            const weeksHtml = forecast.weeks.map((week, index) => {
+                const endingBalance = parseFloat(week.ending_balance);
+                const isNegative = endingBalance < 0;
+
+                const eventsHtml = week.events.length > 0 ? `
+                    <div class="week-details" id="week-${index}-details">
+                        <strong>Events:</strong>
+                        ${week.events.map(event => `
+                            <div class="event-item event-${event.direction}">
+                                <strong>${event.direction === 'in' ? '↗️ In' : '↘️ Out'}:</strong>
+                                $${parseFloat(event.amount).toLocaleString()} -
+                                ${event.category || event.event_type}
+                                (${event.confidence} confidence)
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<div class="week-details" id="week-${index}-details"><em>No events this week</em></div>';
+
+                return `
+                    <div class="forecast-week ${isNegative ? 'negative' : ''}" onclick="toggleWeekDetails(${index})">
+                        <strong>Week ${week.week_number}</strong> (${week.week_start} to ${week.week_end})
+                        <div style="margin-top: 8px;">
+                            Starting: $${parseFloat(week.starting_balance).toLocaleString()} |
+                            In: $${parseFloat(week.cash_in).toLocaleString()} |
+                            Out: $${parseFloat(week.cash_out).toLocaleString()} |
+                            <strong>Ending: $${endingBalance.toLocaleString()}</strong>
+                        </div>
+                        ${eventsHtml}
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('forecastWeeks').innerHTML = weeksHtml;
+        }
+
+        function toggleWeekDetails(weekIndex) {
+            const details = document.getElementById(`week-${weekIndex}-details`);
+            details.classList.toggle('expanded');
+        }
+
+        function createChart(type) {
+            currentChartType = type;
+
+            const ctx = document.getElementById('forecastChart').getContext('2d');
+
+            // Destroy previous chart if exists
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            const weeks = forecastData.weeks;
+            const labels = weeks.map(w => `Week ${w.week_number}`);
+
+            let datasets = [];
+
+            if (type === 'balance') {
+                // Cash Balance Line Chart
+                datasets = [{
+                    label: 'Ending Balance',
+                    data: weeks.map(w => parseFloat(w.ending_balance)),
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }];
+
+                currentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels, datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `Balance: $${context.parsed.y.toLocaleString()}`
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                ticks: {
+                                    callback: (value) => '$' + value.toLocaleString()
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Cash Flow Bar Chart
+                datasets = [
+                    {
+                        label: 'Cash In',
+                        data: weeks.map(w => parseFloat(w.cash_in)),
+                        backgroundColor: 'rgba(76, 175, 80, 0.8)',
+                    },
+                    {
+                        label: 'Cash Out',
+                        data: weeks.map(w => parseFloat(w.cash_out)),
+                        backgroundColor: 'rgba(244, 67, 54, 0.8)',
+                    }
+                ];
+
+                currentChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels, datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `${context.dataset.label}: $${context.parsed.y.toLocaleString()}`
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: (value) => '$' + value.toLocaleString()
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function showChart(type) {
+            // Update tab styling
+            document.querySelectorAll('.chart-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Create new chart
+            createChart(type);
+        }
+
+        function exportCSV() {
+            if (!forecastData) return;
+
+            let csv = 'Week,Start Date,End Date,Starting Balance,Cash In,Cash Out,Net Change,Ending Balance\n';
+
+            forecastData.weeks.forEach(week => {
+                csv += `${week.week_number},${week.week_start},${week.week_end},${week.starting_balance},${week.cash_in},${week.cash_out},${week.net_change},${week.ending_balance}\n`;
+            });
+
+            downloadFile(csv, 'tamio-forecast.csv', 'text/csv');
+        }
+
+        function exportJSON() {
+            if (!forecastData) return;
+
+            const json = JSON.stringify(forecastData, null, 2);
+            downloadFile(json, 'tamio-forecast.json', 'application/json');
+        }
+
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function startOver() {
+            location.reload();
+        }
+
+        // ============================================================================
+        // SCENARIO ANALYSIS FUNCTIONS
+        // ============================================================================
+
+        let currentUserId = null;
+        let scenarios = [];
+
+        function showScenarioBuilder() {
+            document.getElementById('scenarioBuilder').classList.remove('hidden');
+        }
+
+        function hideScenarioBuilder() {
+            document.getElementById('scenarioBuilder').classList.add('hidden');
+            document.getElementById('scenarioName').value = '';
+            document.getElementById('scenarioType').value = '';
+            document.getElementById('scenarioParameters').innerHTML = '';
+        }
+
+        async function updateScenarioFields() {
+            const type = document.getElementById('scenarioType').value;
+            const paramsDiv = document.getElementById('scenarioParameters');
+
+            if (!type) {
+                paramsDiv.innerHTML = '';
+                return;
+            }
+
+            // Fetch actual clients from database for client-based scenarios
+            let dbClients = clients; // Default to local array
+            if (['client_loss', 'payment_delay', 'client_change'].includes(type)) {
+                try {
+                    const response = await fetch(`${API_BASE}/data/clients?user_id=${currentUserId}`);
+                    if (response.ok) {
+                        dbClients = await response.json();
+                    }
+                } catch (error) {
+                    console.error('Error fetching clients:', error);
+                }
+            }
+
+            let html = '';
+
+            if (type === 'hiring') {
+                html = `
+                    <div class="form-group">
+                        <label>Role Title</label>
+                        <input type="text" id="roleTitle" placeholder="e.g., Senior Engineer">
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="date" id="startDate">
+                        </div>
+                        <div class="form-group">
+                            <label>Monthly Cost ($)</label>
+                            <input type="number" id="monthlyCost" placeholder="8000" step="100">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Onboarding Costs (optional)</label>
+                        <input type="number" id="onboardingCosts" placeholder="2000" step="100">
+                    </div>
+                `;
+            } else if (type === 'client_gain') {
+                html = `
+                    <div class="form-group">
+                        <label>Client Name</label>
+                        <input type="text" id="clientName" placeholder="e.g., New Corp">
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="date" id="startDate">
+                        </div>
+                        <div class="form-group">
+                            <label>Monthly Amount ($)</label>
+                            <input type="number" id="monthlyAmount" placeholder="10000" step="100">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Frequency</label>
+                        <select id="frequency">
+                            <option value="monthly">Monthly</option>
+                            <option value="weekly">Weekly</option>
+                        </select>
+                    </div>
+                `;
+            } else if (type === 'client_loss') {
+                html = `
+                    <div class="form-group">
+                        <label>Which Client?</label>
+                        <select id="clientId">
+                            ${dbClients.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Effective Date</label>
+                        <input type="date" id="effectiveDate">
+                    </div>
+                `;
+            } else if (type === 'payment_delay') {
+                html = `
+                    <div class="form-group">
+                        <label>Delay (weeks)</label>
+                        <input type="number" id="delayWeeks" placeholder="2" min="1" max="12">
+                    </div>
+                    <div class="form-group">
+                        <label>Which Client?</label>
+                        <select id="clientId">
+                            ${dbClients.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            } else if (type === 'increased_expense' || type === 'decreased_expense') {
+                const action = type === 'increased_expense' ? 'New/Increased' : 'Reduced';
+                html = `
+                    <div class="form-group">
+                        <label>Expense Name</label>
+                        <input type="text" id="expenseName" placeholder="e.g., Office Rent">
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <label>Monthly Amount ($)</label>
+                            <input type="number" id="monthlyAmount" placeholder="3000" step="100">
+                        </div>
+                        <div class="form-group">
+                            <label>Effective Date</label>
+                            <input type="date" id="effectiveDate">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Is Recurring?</label>
+                        <select id="isRecurring">
+                            <option value="true">Yes (Monthly)</option>
+                            <option value="false">No (One-time)</option>
+                        </select>
+                    </div>
+                `;
+            }
+
+            paramsDiv.innerHTML = html;
+        }
+
+        async function buildScenario() {
+            const name = document.getElementById('scenarioName').value;
+            const type = document.getElementById('scenarioType').value;
+
+            if (!name || !type) {
+                alert('Please enter scenario name and type');
+                return;
+            }
+
+            // Collect parameters based on type
+            let parameters = {};
+            let scopeConfig = {};
+
+            if (type === 'hiring') {
+                parameters = {
+                    role_title: document.getElementById('roleTitle').value,
+                    start_date: document.getElementById('startDate').value,
+                    monthly_cost: parseFloat(document.getElementById('monthlyCost').value),
+                    onboarding_costs: parseFloat(document.getElementById('onboardingCosts').value) || 0
+                };
+            } else if (type === 'client_gain') {
+                parameters = {
+                    client_name: document.getElementById('clientName').value,
+                    start_date: document.getElementById('startDate').value,
+                    monthly_amount: parseFloat(document.getElementById('monthlyAmount').value),
+                    frequency: document.getElementById('frequency').value
+                };
+            } else if (type === 'client_loss') {
+                scopeConfig.client_id = document.getElementById('clientId').value;
+                parameters = {
+                    effective_date: document.getElementById('effectiveDate').value
+                };
+            } else if (type === 'payment_delay') {
+                scopeConfig.client_id = document.getElementById('clientId').value;
+                parameters = {
+                    delay_weeks: parseInt(document.getElementById('delayWeeks').value),
+                    event_ids: []  // Would need to fetch event IDs
+                };
+            } else if (type === 'increased_expense' || type === 'decreased_expense') {
+                parameters = {
+                    expense_name: document.getElementById('expenseName').value,
+                    amount: parseFloat(document.getElementById('monthlyAmount').value),
+                    effective_date: document.getElementById('effectiveDate').value,
+                    is_recurring: document.getElementById('isRecurring').value === 'true',
+                    category: 'other'
+                };
+            }
+
+            try {
+                // Create scenario
+                const scenarioResponse = await fetch(`${API_BASE}/scenarios/scenarios`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: currentUserId,
+                        name: name,
+                        scenario_type: type,
+                        entry_path: 'user_defined',
+                        scope_config: scopeConfig,
+                        parameters: parameters
+                    })
+                });
+
+                if (!scenarioResponse.ok) {
+                    throw new Error('Failed to create scenario');
+                }
+
+                const scenario = await scenarioResponse.json();
+
+                // Build scenario layer
+                await fetch(`${API_BASE}/scenarios/scenarios/${scenario.id}/build`, {
+                    method: 'POST'
+                });
+
+                // Get scenario forecast
+                const forecastResponse = await fetch(`${API_BASE}/scenarios/scenarios/${scenario.id}/forecast`);
+                const forecastData = await forecastResponse.json();
+
+                // Add to scenarios list
+                scenarios.push({scenario, forecastData});
+
+                // Display scenario
+                displayScenario(scenario, forecastData);
+
+                // Hide builder
+                hideScenarioBuilder();
+
+            } catch (error) {
+                console.error('Error building scenario:', error);
+                alert('Error building scenario: ' + error.message);
+            }
+        }
+
+        function displayScenario(scenario, forecastData) {
+            const scenariosList = document.getElementById('scenariosList');
+
+            const scenarioCard = document.createElement('div');
+            scenarioCard.style.cssText = 'background: white; border: 2px solid #667eea; border-radius: 8px; padding: 20px; margin-bottom: 20px;';
+            scenarioCard.id = `scenario-${scenario.id}`;
+
+            // Calculate impact
+            const baseEndingBalance = parseFloat(forecastData.base_forecast.weeks[forecastData.base_forecast.weeks.length - 1].ending_balance);
+            const scenarioEndingBalance = parseFloat(forecastData.scenario_forecast.weeks[forecastData.scenario_forecast.weeks.length - 1].ending_balance);
+            const impact = scenarioEndingBalance - baseEndingBalance;
+            const impactColor = impact >= 0 ? '#4caf50' : '#f44336';
+
+            // Build decision signals
+            let signalsHtml = '';
+            if (forecastData.decision_signals && forecastData.decision_signals.signals) {
+                signalsHtml = forecastData.decision_signals.signals.map(signal => `
+                    <div style="background: ${signal.severity === 'red' ? '#ffebee' : '#fff3e0'}; border-left: 4px solid ${signal.severity === 'red' ? '#f44336' : '#ff9800'}; padding: 15px; margin: 10px 0; border-radius: 4px;">
+                        <strong>${signal.title}</strong>
+                        <p style="margin: 5px 0;">${signal.message}</p>
+                        ${signal.action_window_weeks !== null ? `<p style="color: #666; font-size: 14px;">Action window: ${signal.action_window_weeks} weeks</p>` : ''}
+                    </div>
+                `).join('');
+            }
+
+            scenarioCard.innerHTML = `
+                <h3>${scenario.name}</h3>
+                <p style="color: #666;">Type: ${scenario.scenario_type.replace('_', ' ')}</p>
+
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                    <strong>Impact on Week 13:</strong>
+                    <p style="font-size: 24px; color: ${impactColor}; margin: 5px 0;">
+                        ${impact >= 0 ? '+' : ''}$${impact.toLocaleString()}
+                    </p>
+                    <p style="color: #666; font-size: 14px;">
+                        Base: $${baseEndingBalance.toLocaleString()} → Scenario: $${scenarioEndingBalance.toLocaleString()}
+                    </p>
+                </div>
+
+                ${signalsHtml ? '<h4>⚠️ Decision Signals:</h4>' + signalsHtml : ''}
+
+                <div class="buttons" style="margin-top: 20px;">
+                    <button class="btn btn-secondary" onclick="viewScenarioForecast('${scenario.id}')">View Full Forecast</button>
+                    <button class="btn btn-primary" onclick="confirmScenario('${scenario.id}')">✓ Confirm & Apply</button>
+                    <button class="btn" onclick="discardScenario('${scenario.id}')" style="background: #f44336; color: white;">✗ Discard</button>
+                </div>
+            `;
+
+            scenariosList.appendChild(scenarioCard);
+        }
+
+        async function viewScenarioForecast(scenarioId) {
+            const scenarioData = scenarios.find(s => s.scenario.id === scenarioId);
+            if (!scenarioData) return;
+
+            // Create overlay forecast chart showing base vs scenario
+            const forecast = scenarioData.forecastData.scenario_forecast;
+            const baseForecast = scenarioData.forecastData.base_forecast;
+
+            // Update main chart to show comparison
+            const ctx = document.getElementById('forecastChart').getContext('2d');
+
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            const weeks = forecast.weeks;
+            const labels = weeks.map(w => `Week ${w.week_number}`);
+
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Base Forecast',
+                            data: baseForecast.weeks.map(w => parseFloat(w.ending_balance)),
+                            borderColor: '#999',
+                            backgroundColor: 'rgba(153, 153, 153, 0.1)',
+                            borderDash: [5, 5],
+                            fill: false
+                        },
+                        {
+                            label: 'Scenario Forecast',
+                            data: weeks.map(w => parseFloat(w.ending_balance)),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `${context.dataset.label}: $${context.parsed.y.toLocaleString()}`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: (value) => '$' + value.toLocaleString()
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Scroll to chart
+            document.querySelector('.chart-container').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function confirmScenario(scenarioId) {
+            if (!confirm('Are you sure you want to apply this scenario? This will update your base forecast.')) {
+                return;
+            }
+
+            try {
+                await fetch(`${API_BASE}/scenarios/scenarios/${scenarioId}/confirm`, {
+                    method: 'POST'
+                });
+
+                alert('Scenario confirmed! Your forecast has been updated.');
+                location.reload();  // Reload to show updated forecast
+            } catch (error) {
+                console.error('Error confirming scenario:', error);
+                alert('Error confirming scenario: ' + error.message);
+            }
+        }
+
+        async function discardScenario(scenarioId) {
+            try {
+                await fetch(`${API_BASE}/scenarios/scenarios/${scenarioId}`, {
+                    method: 'DELETE'
+                });
+
+                // Remove from UI
+                document.getElementById(`scenario-${scenarioId}`).remove();
+
+                // Remove from scenarios array
+                scenarios = scenarios.filter(s => s.scenario.id !== scenarioId);
+            } catch (error) {
+                console.error('Error discarding scenario:', error);
+                alert('Error discarding scenario: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
