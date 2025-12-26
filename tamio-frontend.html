@@ -606,18 +606,120 @@
 <body>
     <div class="container">
         <h1>Tamio Cash Flow Onboarding</h1>
-        <p class="subtitle">Set up your 13-week cash flow forecast in 3 simple steps</p>
+        <p class="subtitle">Set up your 13-week cash flow forecast</p>
 
         <!-- Progress Bar -->
-        <div class="progress-bar">
+        <div class="progress-bar" id="progressBar" style="display: none;">
             <div class="progress-step active" id="step1">1</div>
             <div class="progress-step" id="step2">2</div>
             <div class="progress-step" id="step3">3</div>
         </div>
 
-        <!-- Page 1: Cash Position -->
-        <div class="page active" id="page1">
-            <h2>Page 1: Current Cash Position</h2>
+        <!-- Auth Page: Login / Signup -->
+        <div class="page active" id="pageAuth">
+            <h2>Welcome to Tamio</h2>
+            <p class="subtitle">Sign in to access your cash flow forecast</p>
+
+            <!-- Auth Tabs -->
+            <div style="display: flex; gap: 0; margin: 30px auto; max-width: 300px; border-radius: 8px; overflow: hidden; border: 2px solid #6366f1;">
+                <button id="loginTab" onclick="showAuthTab('login')" style="flex: 1; padding: 12px; border: none; background: #6366f1; color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                    Log In
+                </button>
+                <button id="signupTab" onclick="showAuthTab('signup')" style="flex: 1; padding: 12px; border: none; background: white; color: #6366f1; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                    Sign Up
+                </button>
+            </div>
+
+            <!-- Login Form -->
+            <div id="loginForm" style="max-width: 400px; margin: 0 auto;">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter password">
+                </div>
+                <div id="loginError" class="error" style="display: none; color: #dc3545; background: #fff5f5; padding: 10px; border-radius: 6px; margin-bottom: 15px;"></div>
+                <button class="btn btn-primary" onclick="handleLogin()" style="width: 100%; padding: 14px; font-size: 16px;">
+                    Log In
+                </button>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="signupForm" style="max-width: 400px; margin: 0 auto; display: none;">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="signupEmail" placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="signupPassword" placeholder="Minimum 8 characters">
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input type="password" id="signupConfirm" placeholder="Confirm password">
+                </div>
+                <div id="signupError" class="error" style="display: none; color: #dc3545; background: #fff5f5; padding: 10px; border-radius: 6px; margin-bottom: 15px;"></div>
+                <button class="btn btn-primary" onclick="handleSignup()" style="width: 100%; padding: 14px; font-size: 16px;">
+                    Create Account
+                </button>
+            </div>
+        </div>
+
+        <!-- Page 0: Choose Your Path -->
+        <div class="page" id="page0">
+            <h2>How would you like to get started?</h2>
+            <p class="subtitle">Choose how to set up your cash flow data</p>
+
+            <div style="display: flex; gap: 20px; margin-top: 30px; flex-wrap: wrap;">
+                <!-- Xero Option -->
+                <div onclick="selectOnboardingPath('xero')"
+                     style="flex: 1; min-width: 280px; background: linear-gradient(135deg, #13B5EA 0%, #0d8ab8 100%); color: white; border-radius: 12px; padding: 30px; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(19, 181, 234, 0.3);"
+                     onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 8px 25px rgba(19, 181, 234, 0.4)'"
+                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(19, 181, 234, 0.3)'">
+                    <div style="font-size: 48px; margin-bottom: 15px;">🔗</div>
+                    <h3 style="margin: 0 0 10px 0; font-size: 22px;">Connect to Xero</h3>
+                    <p style="margin: 0; opacity: 0.9; font-size: 14px; line-height: 1.5;">
+                        Import your clients, invoices, and bills automatically from Xero.
+                        <strong>Recommended if you use Xero for accounting.</strong>
+                    </p>
+                    <ul style="margin: 15px 0 0 0; padding-left: 20px; font-size: 13px; opacity: 0.9;">
+                        <li>Auto-detect retainer clients</li>
+                        <li>Import payment history</li>
+                        <li>Sync bills & expenses</li>
+                    </ul>
+                    <div style="margin-top: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 8px; display: inline-block; font-weight: 600;">
+                        Connect Xero →
+                    </div>
+                </div>
+
+                <!-- Manual Option -->
+                <div onclick="selectOnboardingPath('manual')"
+                     style="flex: 1; min-width: 280px; background: white; border: 2px solid #667eea; border-radius: 12px; padding: 30px; cursor: pointer; transition: all 0.3s;"
+                     onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 8px 25px rgba(102, 126, 234, 0.2)'"
+                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <div style="font-size: 48px; margin-bottom: 15px;">📝</div>
+                    <h3 style="margin: 0 0 10px 0; font-size: 22px; color: #333;">Enter Manually</h3>
+                    <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.5;">
+                        Set up your cash flow data step by step with our guided forms.
+                        <strong>Best for quick setup or if you don't use Xero.</strong>
+                    </p>
+                    <ul style="margin: 15px 0 0 0; padding-left: 20px; font-size: 13px; color: #666;">
+                        <li>Add cash accounts</li>
+                        <li>Define clients & billing</li>
+                        <li>Set up expense buckets</li>
+                    </ul>
+                    <div style="margin-top: 20px; padding: 10px 20px; background: #667eea; color: white; border-radius: 8px; display: inline-block; font-weight: 600;">
+                        Start Manual Setup →
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 1: Cash Position (Manual Path) -->
+        <div class="page" id="page1">
+            <h2>Step 1: Current Cash Position</h2>
             <p class="subtitle">Add your current cash accounts</p>
 
             <div id="accountsList"></div>
@@ -687,6 +789,43 @@
                         <option value="USD">USD</option>
                         <option value="EUR">EUR</option>
                         <option value="GBP">GBP</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label>Payment Behavior</label>
+                    <select id="clientPaymentBehavior">
+                        <option value="on_time">On Time</option>
+                        <option value="delayed">Delayed</option>
+                        <option value="unknown" selected>Unknown</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Churn Risk</label>
+                    <select id="clientChurnRisk">
+                        <option value="low" selected>Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label>Scope Risk</label>
+                    <select id="clientScopeRisk">
+                        <option value="low" selected>Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="clientStatus">
+                        <option value="active" selected>Active</option>
+                        <option value="paused">Paused</option>
                     </select>
                 </div>
             </div>
@@ -829,7 +968,12 @@
             </div>
 
             <div id="resultSection" class="hidden">
-                <h2>Your 13-Week Cash Flow Forecast</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h2 style="margin: 0;">Your 13-Week Cash Flow Forecast</h2>
+                    <button onclick="logout()" style="padding: 8px 16px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 14px; color: #666;">
+                        Logout
+                    </button>
+                </div>
                 <div id="forecastSummary"></div>
 
                 <!-- Chart Tabs -->
@@ -935,6 +1079,43 @@
                                         <option value="USD">USD</option>
                                         <option value="EUR">EUR</option>
                                         <option value="GBP">GBP</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="form-group">
+                                    <label>Payment Behavior</label>
+                                    <select id="managePaymentBehavior">
+                                        <option value="on_time">On Time</option>
+                                        <option value="delayed">Delayed</option>
+                                        <option value="unknown" selected>Unknown</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Churn Risk</label>
+                                    <select id="manageChurnRisk">
+                                        <option value="low" selected>Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="form-group">
+                                    <label>Scope Risk</label>
+                                    <select id="manageScopeRisk">
+                                        <option value="low" selected>Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Status</label>
+                                    <select id="manageClientStatus">
+                                        <option value="active" selected>Active</option>
+                                        <option value="paused">Paused</option>
                                     </select>
                                 </div>
                             </div>
@@ -1153,6 +1334,70 @@
                 <button class="btn btn-secondary" onclick="prevPage()">← Go Back</button>
             </div>
         </div>
+
+        <!-- Page 5: Xero Data Import (for Xero onboarding path) -->
+        <div class="page" id="page5">
+            <h2>Import Your Xero Data</h2>
+            <p class="subtitle">We've connected to your Xero account. Now let's import your data to set up your forecast.</p>
+
+            <div id="xeroImportStatus" style="padding: 20px; border-radius: 8px; margin-bottom: 20px; background: #d4edda;">
+                <span style="color: #155724;">✓ Successfully connected to Xero!</span>
+            </div>
+
+            <!-- Data Preview Section -->
+            <div id="xeroOnboardingPreview" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin-top: 0;">What We'll Import</h3>
+                <div id="xeroOnboardingPreviewContent" style="margin-top: 15px;">
+                    <p style="color: #666;">Loading your Xero data...</p>
+                </div>
+            </div>
+
+            <!-- Cash Buffer Rule Section (same as manual flow) -->
+            <div style="padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #dc3545; background: #fff5f5;">
+                <h3 style="color: #dc3545; margin: 0 0 10px 0;">🛡️ Cash Buffer Rule (Safety Net)</h3>
+                <p style="color: #666; margin-bottom: 20px;">
+                    Set your minimum cash buffer requirement. This is the amount you need to keep in the bank at all times
+                    to feel safe. We'll show this as a red line on your forecast and warn you if you're at risk of going below it.
+                </p>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label>Buffer Type</label>
+                        <select id="xeroBufferType" onchange="updateXeroBufferPreview()">
+                            <option value="months">Months of Runway</option>
+                            <option value="fixed">Fixed Amount</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="xeroBufferMonthsGroup">
+                        <label>Number of Months</label>
+                        <select id="xeroBufferMonths" onchange="updateXeroBufferPreview()">
+                            <option value="1">1 month</option>
+                            <option value="2">2 months</option>
+                            <option value="3" selected>3 months (Recommended)</option>
+                            <option value="4">4 months</option>
+                            <option value="5">5 months</option>
+                            <option value="6">6 months</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="xeroBufferFixedGroup" style="display: none;">
+                        <label>Fixed Buffer Amount</label>
+                        <input type="number" id="xeroBufferFixedAmount" placeholder="e.g., 50000" step="1000" onchange="updateXeroBufferPreview()">
+                    </div>
+                </div>
+
+                <div id="xeroBufferPreview" style="background: #fff3f3; border: 2px solid #dc3545; border-radius: 8px; padding: 15px; margin-top: 15px;">
+                    <strong style="color: #dc3545;">Your Cash Buffer:</strong>
+                    <span id="xeroBufferPreviewText">Will be calculated based on your imported expenses...</span>
+                </div>
+            </div>
+
+            <div class="buttons">
+                <button class="btn btn-secondary" onclick="cancelXeroOnboarding()">Cancel & Start Manual</button>
+                <button class="btn btn-primary" onclick="completeXeroOnboarding()" style="background: #13B5EA;">
+                    Import Data & Generate Forecast →
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1160,7 +1405,11 @@
         const API_BASE = 'http://localhost:8000/api';
 
         // State
-        let currentPage = 1;
+        let currentPage = 0;  // Start at path selection page
+        let onboardingPath = null;  // 'manual' or 'xero'
+        let currentUserId = null;  // Will be set after onboarding or Xero callback
+        let authToken = null;  // JWT token for authenticated requests
+        let currentUser = null;  // Current authenticated user info
         let userData = {
             email: `user${Date.now()}@example.com`,
             base_currency: 'USD'
@@ -1169,14 +1418,351 @@
         let clients = [];
         let expenses = [];
 
+        // ========== Authentication Functions ==========
+
+        // Switch between login and signup tabs
+        function showAuthTab(tab) {
+            const loginTab = document.getElementById('loginTab');
+            const signupTab = document.getElementById('signupTab');
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+
+            if (tab === 'login') {
+                loginTab.style.background = '#6366f1';
+                loginTab.style.color = 'white';
+                signupTab.style.background = 'white';
+                signupTab.style.color = '#6366f1';
+                loginForm.style.display = 'block';
+                signupForm.style.display = 'none';
+            } else {
+                signupTab.style.background = '#6366f1';
+                signupTab.style.color = 'white';
+                loginTab.style.background = 'white';
+                loginTab.style.color = '#6366f1';
+                signupForm.style.display = 'block';
+                loginForm.style.display = 'none';
+            }
+
+            // Clear errors
+            document.getElementById('loginError').style.display = 'none';
+            document.getElementById('signupError').style.display = 'none';
+        }
+
+        // Handle login form submission
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+
+            errorDiv.style.display = 'none';
+
+            if (!email || !password) {
+                errorDiv.textContent = 'Please enter email and password';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Login failed');
+                }
+
+                // Save session and proceed
+                saveAuthSession(data.access_token, data.user);
+                await proceedAfterAuth();
+
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        // Handle signup form submission
+        async function handleSignup() {
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const confirm = document.getElementById('signupConfirm').value;
+            const errorDiv = document.getElementById('signupError');
+
+            errorDiv.style.display = 'none';
+
+            // Validation
+            if (!email || !password || !confirm) {
+                errorDiv.textContent = 'Please fill in all fields';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (password.length < 8) {
+                errorDiv.textContent = 'Password must be at least 8 characters';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (password !== confirm) {
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Signup failed');
+                }
+
+                // Save session and proceed to onboarding
+                saveAuthSession(data.access_token, data.user);
+                await proceedAfterAuth();
+
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        // Save auth session to localStorage
+        function saveAuthSession(token, user) {
+            authToken = token;
+            currentUser = user;
+            currentUserId = user.id;
+            userData.email = user.email;
+            userData.base_currency = user.base_currency;
+
+            localStorage.setItem('tamio_token', token);
+            localStorage.setItem('tamio_user', JSON.stringify(user));
+        }
+
+        // Load auth session from localStorage
+        function loadAuthSession() {
+            const token = localStorage.getItem('tamio_token');
+            const userJson = localStorage.getItem('tamio_user');
+
+            if (token && userJson) {
+                try {
+                    authToken = token;
+                    currentUser = JSON.parse(userJson);
+                    currentUserId = currentUser.id;
+                    userData.email = currentUser.email;
+                    userData.base_currency = currentUser.base_currency;
+                    return true;
+                } catch (e) {
+                    clearAuthSession();
+                }
+            }
+            return false;
+        }
+
+        // Clear auth session (logout)
+        function clearAuthSession() {
+            authToken = null;
+            currentUser = null;
+            currentUserId = null;
+            localStorage.removeItem('tamio_token');
+            localStorage.removeItem('tamio_user');
+        }
+
+        // Logout function
+        function logout() {
+            clearAuthSession();
+            // Hide all pages, show auth page
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('pageAuth').classList.add('active');
+            document.getElementById('progressBar').style.display = 'none';
+            // Clear form fields
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+        }
+
+        // Authenticated fetch wrapper
+        async function authFetch(url, options = {}) {
+            if (!authToken) {
+                throw new Error('Not authenticated');
+            }
+
+            const headers = {
+                ...options.headers,
+                'Authorization': `Bearer ${authToken}`
+            };
+
+            const response = await fetch(url, { ...options, headers });
+
+            // Handle token expiration
+            if (response.status === 401) {
+                clearAuthSession();
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById('pageAuth').classList.add('active');
+                throw new Error('Session expired. Please log in again.');
+            }
+
+            return response;
+        }
+
+        // Verify token is still valid with backend
+        async function verifyToken() {
+            if (!authToken) return false;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    currentUser = user;
+                    currentUserId = user.id;
+                    return true;
+                } else {
+                    clearAuthSession();
+                    return false;
+                }
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // Proceed after successful login/signup
+        async function proceedAfterAuth() {
+            if (currentUser.has_completed_onboarding) {
+                // User has completed onboarding - go to dashboard
+                await loadExistingUserData();
+            } else {
+                // User hasn't completed onboarding - go to path selection
+                document.getElementById('pageAuth').classList.remove('active');
+                document.getElementById('page0').classList.add('active');
+            }
+        }
+
+        // Load existing user data and show dashboard
+        async function loadExistingUserData() {
+            try {
+                // Fetch user's existing data
+                const response = await authFetch(`${API_BASE}/data/user/${currentUserId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    // Store the data locally
+                    accounts = data.cash_accounts || [];
+                    clients = data.clients || [];
+                    expenses = data.expense_buckets || [];
+                }
+
+                // Fetch forecast and show dashboard
+                await fetchForecast(currentUserId);
+
+                // Navigate to dashboard (page 5)
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById('page5').classList.add('active');
+                document.getElementById('progressBar').style.display = 'none';
+
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                // Fallback to onboarding
+                document.getElementById('pageAuth').classList.remove('active');
+                document.getElementById('page0').classList.add('active');
+            }
+        }
+
+        // Initialize auth on page load
+        async function initAuth() {
+            // Check for existing session
+            if (loadAuthSession()) {
+                // Verify token is still valid
+                const isValid = await verifyToken();
+                if (isValid) {
+                    await proceedAfterAuth();
+                    return true;
+                }
+            }
+            // Show auth page (already active by default)
+            return false;
+        }
+
+        // ========== End Authentication Functions ==========
+
+        // Hide progress bar initially (on path selection page)
+        document.getElementById('progressBar').style.display = 'none';
+
         // Set today's date as default
         document.getElementById('accountDate').valueAsDate = new Date();
 
         // Initialize billing config
         updateBillingConfig();
 
-        // Handle Xero OAuth callback on page load
-        handleXeroCallback();
+        // Initialize auth and handle Xero OAuth callback on page load
+        (async function() {
+            // Check if this is a Xero OAuth callback (has xero_connected or xero_error in URL)
+            const urlParams = new URLSearchParams(window.location.search);
+            const isXeroCallback = urlParams.has('xero_connected') || urlParams.has('xero_error');
+
+            if (isXeroCallback) {
+                // Handle Xero callback first
+                handleXeroCallback();
+            } else {
+                // Normal page load - initialize auth
+                await initAuth();
+            }
+        })();
+
+        // Select onboarding path
+        function selectOnboardingPath(path) {
+            onboardingPath = path;
+
+            if (path === 'xero') {
+                // Start Xero OAuth flow
+                startXeroOnboarding();
+            } else {
+                // Manual path - go to step 1
+                document.getElementById('page0').classList.remove('active');
+                document.getElementById('page1').classList.add('active');
+                document.getElementById('progressBar').style.display = 'flex';
+                currentPage = 1;
+            }
+        }
+
+        // Start Xero onboarding
+        async function startXeroOnboarding() {
+            // User is already authenticated via login/signup, so we have currentUserId
+            if (!currentUserId || !authToken) {
+                alert('Please log in first');
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById('pageAuth').classList.add('active');
+                return;
+            }
+
+            try {
+                // Store user ID and path for callback (will be restored after OAuth redirect)
+                sessionStorage.setItem('xero_user_id', currentUserId);
+                sessionStorage.setItem('onboarding_path', 'xero');
+
+                // Initiate Xero OAuth with the authenticated user
+                const xeroResponse = await authFetch(`${API_BASE}/xero/connect?user_id=${currentUserId}`);
+                const xeroData = await xeroResponse.json();
+
+                if (xeroData.auth_url) {
+                    window.location.href = xeroData.auth_url;
+                } else {
+                    alert('Error connecting to Xero: ' + (xeroData.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error starting Xero onboarding:', error);
+                alert('Error: ' + error.message);
+            }
+        }
 
         // Navigation
         function nextPage() {
@@ -1362,13 +1948,17 @@
             const name = document.getElementById('clientName').value;
             const type = document.getElementById('clientType').value;
             const currency = document.getElementById('clientCurrency').value;
+            const paymentBehavior = document.getElementById('clientPaymentBehavior').value;
+            const churnRisk = document.getElementById('clientChurnRisk').value;
+            const scopeRisk = document.getElementById('clientScopeRisk').value;
+            const status = document.getElementById('clientStatus').value;
 
             if (!name) {
                 alert('Please enter client name');
                 return;
             }
 
-            let billingConfig = {};
+            let billingConfig = { source: "manual" };
 
             if (type === 'retainer') {
                 const amount = parseFloat(document.getElementById('billingAmount').value);
@@ -1389,7 +1979,8 @@
                     frequency: document.getElementById('billingFrequency').value,
                     invoice_day: invoiceDay,
                     amount: amount,
-                    payment_terms: document.getElementById('paymentTerms').value
+                    payment_terms: document.getElementById('paymentTerms').value,
+                    source: "manual"
                 };
             } else if (type === 'project') {
                 const totalValue = parseFloat(document.getElementById('projectValue').value);
@@ -1409,8 +2000,10 @@
                         amount: milestone1Amount,
                         expected_date: milestone1Date,
                         trigger_type: "date",
-                        payment_terms: "net_7"
-                    }]
+                        payment_terms: "net_7",
+                        status: "pending"
+                    }],
+                    source: "manual"
                 };
             } else if (type === 'usage') {
                 const amount = parseFloat(document.getElementById('typicalAmount').value);
@@ -1421,7 +2014,8 @@
                 billingConfig = {
                     settlement_frequency: document.getElementById('settlementFrequency').value,
                     typical_amount: amount,
-                    payment_terms: "net_30"
+                    payment_terms: "net_30",
+                    source: "manual"
                 };
             }
 
@@ -1429,10 +2023,10 @@
                 name: name,
                 client_type: type,
                 currency: currency,
-                status: "active",
-                payment_behavior: "on_time",
-                churn_risk: "low",
-                scope_risk: "low",
+                status: status,
+                payment_behavior: paymentBehavior,
+                churn_risk: churnRisk,
+                scope_risk: scopeRisk,
                 billing_config: billingConfig
             });
 
@@ -1451,7 +2045,7 @@
             const list = document.getElementById('clientsList');
 
             list.innerHTML = clients.map((client, i) => {
-                let details = `Type: ${client.client_type} • ${client.currency}`;
+                let details = `Type: ${client.client_type} • ${client.currency} • ${client.status}`;
 
                 // Add billing info based on type
                 if (client.client_type === 'retainer' && client.billing_config) {
@@ -1466,6 +2060,9 @@
                 } else if (client.client_type === 'usage' && client.billing_config) {
                     details += `<br>~$${client.billing_config.typical_amount?.toLocaleString() || 0}/${client.billing_config.settlement_frequency}`;
                 }
+
+                // Add risk indicators
+                details += `<br><small style="color: #666;">Payment: ${client.payment_behavior} • Churn risk: ${client.churn_risk} • Scope risk: ${client.scope_risk}</small>`;
 
                 return `
                     <div class="card">
@@ -1648,8 +2245,8 @@
             document.getElementById('errorSection').classList.add('hidden');
 
             try {
-                // Submit onboarding data
-                const response = await fetch(`${API_BASE}/data/onboarding`, {
+                // Submit onboarding data with authenticated user
+                const response = await authFetch(`${API_BASE}/data/onboarding`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1663,19 +2260,39 @@
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('Validation error:', errorData);
-                    throw new Error(`API error: ${response.statusText} - ${JSON.stringify(errorData.detail || errorData)}`);
+                    let errorMessage = `API error: ${response.status} ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        console.error('Validation error:', errorData);
+                        if (errorData.detail) {
+                            if (Array.isArray(errorData.detail)) {
+                                // Pydantic validation errors
+                                errorMessage = errorData.detail.map(e => `${e.loc?.join('.')} - ${e.msg}`).join('; ');
+                            } else {
+                                errorMessage = errorData.detail;
+                            }
+                        }
+                    } catch (parseError) {
+                        console.error('Could not parse error response:', parseError);
+                    }
+                    throw new Error(errorMessage);
                 }
 
                 const onboardingResult = await response.json();
-                const userId = onboardingResult.user.id;
 
-                // Store user ID globally for scenario analysis
-                currentUserId = userId;
+                // Mark onboarding as complete
+                await authFetch(`${API_BASE}/auth/complete-onboarding`, {
+                    method: 'POST'
+                });
+
+                // Update local user state
+                if (currentUser) {
+                    currentUser.has_completed_onboarding = true;
+                    localStorage.setItem('tamio_user', JSON.stringify(currentUser));
+                }
 
                 // Get forecast
-                const forecastResponse = await fetch(`${API_BASE}/forecast?user_id=${userId}`);
+                const forecastResponse = await authFetch(`${API_BASE}/forecast?user_id=${currentUserId}`);
 
                 if (!forecastResponse.ok) {
                     throw new Error(`Forecast API error: ${forecastResponse.statusText}`);
@@ -1697,7 +2314,6 @@
         let forecastData = null;
         let currentChart = null;
         let currentChartType = 'balance';
-        let currentUserId = null;
 
         function displayForecast(forecast) {
             document.getElementById('loadingSection').classList.add('hidden');
@@ -2089,7 +2705,7 @@
             }
 
             list.innerHTML = managedClients.map((client, i) => {
-                let details = `Type: ${client.client_type} • ${client.currency}`;
+                let details = `Type: ${client.client_type} • ${client.currency} • ${client.status}`;
 
                 if (client.client_type === 'retainer' && client.billing_config) {
                     const invoiceDay = client.billing_config.invoice_day || 1;
@@ -2099,6 +2715,9 @@
                     details += `<br>$${client.billing_config.amount?.toLocaleString() || 0}/${client.billing_config.frequency}`;
                     details += `<br><small style="color: #666;">Invoice: Day ${invoiceDay} → Payment: ~Day ${expectedDay}</small>`;
                 }
+
+                // Add risk indicators
+                details += `<br><small style="color: #666;">Payment: ${client.payment_behavior || 'unknown'} • Churn risk: ${client.churn_risk || 'low'} • Scope risk: ${client.scope_risk || 'low'}</small>`;
 
                 return `
                     <div class="card">
@@ -2228,13 +2847,17 @@
             const name = document.getElementById('manageClientName').value;
             const type = document.getElementById('manageClientType').value;
             const currency = document.getElementById('manageClientCurrency').value;
+            const paymentBehavior = document.getElementById('managePaymentBehavior').value;
+            const churnRisk = document.getElementById('manageChurnRisk').value;
+            const scopeRisk = document.getElementById('manageScopeRisk').value;
+            const status = document.getElementById('manageClientStatus').value;
 
             if (!name) {
                 alert('Please enter client name');
                 return;
             }
 
-            let billingConfig = {};
+            let billingConfig = { source: "manual" };
 
             if (type === 'retainer') {
                 const amount = parseFloat(document.getElementById('manageBillingAmount').value);
@@ -2246,7 +2869,8 @@
                     frequency: document.getElementById('manageBillingFrequency').value,
                     invoice_day: parseInt(document.getElementById('manageInvoiceDay').value),
                     amount: amount,
-                    payment_terms: document.getElementById('managePaymentTerms').value
+                    payment_terms: document.getElementById('managePaymentTerms').value,
+                    source: "manual"
                 };
             } else if (type === 'project') {
                 const totalValue = parseFloat(document.getElementById('manageProjectValue').value);
@@ -2266,8 +2890,10 @@
                         amount: depositAmount,
                         expected_date: depositDate,
                         trigger_type: "date",
-                        payment_terms: "net_7"
-                    }]
+                        payment_terms: "net_7",
+                        status: "pending"
+                    }],
+                    source: "manual"
                 };
             } else if (type === 'usage') {
                 const amount = parseFloat(document.getElementById('manageTypicalAmount').value);
@@ -2278,7 +2904,8 @@
                 billingConfig = {
                     settlement_frequency: document.getElementById('manageSettlementFrequency').value,
                     typical_amount: amount,
-                    payment_terms: "net_30"
+                    payment_terms: "net_30",
+                    source: "manual"
                 };
             }
 
@@ -2291,10 +2918,10 @@
                         name: name,
                         client_type: type,
                         currency: currency,
-                        status: "active",
-                        payment_behavior: "on_time",
-                        churn_risk: "low",
-                        scope_risk: "low",
+                        status: status,
+                        payment_behavior: paymentBehavior,
+                        churn_risk: churnRisk,
+                        scope_risk: scopeRisk,
                         billing_config: billingConfig
                     })
                 });
@@ -2760,21 +3387,305 @@
             if (xeroConnected === 'true') {
                 // Clean URL
                 window.history.replaceState({}, document.title, window.location.pathname);
+
                 // Restore user ID if stored
                 const storedUserId = sessionStorage.getItem('xero_user_id');
+                const storedOnboardingPath = sessionStorage.getItem('onboarding_path');
+
                 if (storedUserId) {
                     currentUserId = storedUserId;
                     sessionStorage.removeItem('xero_user_id');
                 }
-                // Show success and go to integrations
-                alert('Successfully connected to Xero!');
-                showPage(8); // Go to dashboard
-                showDataTab('integrations');
+
+                // Check if this is an onboarding flow
+                if (storedOnboardingPath === 'xero') {
+                    sessionStorage.removeItem('onboarding_path');
+                    onboardingPath = 'xero';
+
+                    // Also restore auth token if stored
+                    loadAuthSession();
+
+                    // Hide page 0 and auth page, show page 5 (Xero import page)
+                    document.getElementById('pageAuth').classList.remove('active');
+                    document.getElementById('page0').classList.remove('active');
+                    document.getElementById('page5').classList.add('active');
+
+                    // Load the Xero data preview
+                    loadXeroOnboardingPreview();
+                } else {
+                    // Not onboarding - go to dashboard integrations tab
+                    alert('Successfully connected to Xero!');
+                    showPage(4); // Go to dashboard (page 4 is the forecast/dashboard page)
+                    showDataTab('integrations');
+                }
             } else if (xeroError) {
                 // Clean URL
                 window.history.replaceState({}, document.title, window.location.pathname);
-                alert('Error connecting to Xero: ' + xeroError);
+
+                // Check if this was an onboarding attempt
+                const storedOnboardingPath = sessionStorage.getItem('onboarding_path');
+                if (storedOnboardingPath === 'xero') {
+                    sessionStorage.removeItem('onboarding_path');
+                    sessionStorage.removeItem('xero_user_id');
+                    alert('Error connecting to Xero: ' + xeroError + '\n\nYou can try again or use the manual setup.');
+                    // Stay on page 0 for retry
+                } else {
+                    alert('Error connecting to Xero: ' + xeroError);
+                }
             }
+        }
+
+        // Xero cash buffer preview update (similar to manual flow)
+        let xeroBankBalance = 0;  // Will be populated from Xero API
+        let xeroMonthlyExpenses = 0;  // Will be calculated from Xero bills
+
+        function updateXeroBufferPreview() {
+            const bufferType = document.getElementById('xeroBufferType')?.value || 'months';
+            const bufferMonthsGroup = document.getElementById('xeroBufferMonthsGroup');
+            const bufferFixedGroup = document.getElementById('xeroBufferFixedGroup');
+
+            // Toggle visibility
+            if (bufferMonthsGroup && bufferFixedGroup) {
+                if (bufferType === 'months') {
+                    bufferMonthsGroup.style.display = 'block';
+                    bufferFixedGroup.style.display = 'none';
+                } else {
+                    bufferMonthsGroup.style.display = 'none';
+                    bufferFixedGroup.style.display = 'block';
+                }
+            }
+
+            let bufferAmount = 0;
+            let bufferText = '';
+
+            if (bufferType === 'months') {
+                const months = parseInt(document.getElementById('xeroBufferMonths')?.value || 3);
+                bufferAmount = xeroMonthlyExpenses * months;
+                cashBufferConfig = {
+                    type: 'months',
+                    months: months,
+                    fixedAmount: 0,
+                    calculatedAmount: bufferAmount
+                };
+                if (xeroMonthlyExpenses > 0) {
+                    bufferText = `$${bufferAmount.toLocaleString()} (${months} months × $${xeroMonthlyExpenses.toLocaleString()}/month expenses)`;
+                } else {
+                    bufferText = `${months} months of expenses (will calculate after import)`;
+                }
+            } else {
+                bufferAmount = parseFloat(document.getElementById('xeroBufferFixedAmount')?.value || 0);
+                cashBufferConfig = {
+                    type: 'fixed',
+                    months: 0,
+                    fixedAmount: bufferAmount,
+                    calculatedAmount: bufferAmount
+                };
+                const monthsEquivalent = xeroMonthlyExpenses > 0 ? (bufferAmount / xeroMonthlyExpenses).toFixed(1) : '?';
+                bufferText = `$${bufferAmount.toLocaleString()} (≈ ${monthsEquivalent} months of expenses)`;
+            }
+
+            const previewText = document.getElementById('xeroBufferPreviewText');
+            if (previewText) {
+                previewText.innerHTML = bufferText;
+            }
+
+            // Save to localStorage for persistence
+            localStorage.setItem('cashBufferConfig', JSON.stringify(cashBufferConfig));
+        }
+
+        // Load Xero data preview for onboarding
+        async function loadXeroOnboardingPreview() {
+            const previewContent = document.getElementById('xeroOnboardingPreviewContent');
+            previewContent.innerHTML = '<p style="color: #666;">Loading your Xero data...</p>';
+
+            try {
+                const response = await fetch(`${API_BASE}/xero/preview?user_id=${currentUserId}`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to load Xero data');
+                }
+
+                const data = await response.json();
+                const summary = data.summary || {};
+                const org = data.organisation || {};
+                const bankSummary = data.bank_summary || { accounts: [], total_balance: 0 };
+
+                // Store Xero data for buffer calculation
+                xeroBankBalance = bankSummary.total_balance || 0;
+                // Estimate monthly expenses from bills (payables)
+                xeroMonthlyExpenses = (summary.payables_total || 0) / 3;  // Rough estimate: outstanding bills / 3 months
+
+                let html = '';
+
+                // Show organisation name if available
+                if (org.name) {
+                    html += `<p style="margin-bottom: 15px; color: #333;"><strong>Organisation:</strong> ${org.name} (${org.base_currency || 'USD'})</p>`;
+                }
+
+                html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
+
+                // Contacts summary - use summary data for accurate counts
+                const contactCount = summary.contacts || 0;
+                html += `
+                    <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h4 style="margin: 0 0 10px 0; color: #667eea;">Contacts</h4>
+                        <p style="font-size: 24px; margin: 0; font-weight: bold;">${contactCount}</p>
+                        <p style="color: #666; font-size: 14px; margin: 5px 0 0 0;">customers found</p>
+                    </div>
+                `;
+
+                // Invoices summary (receivables)
+                const invoiceCount = summary.receivables_count || 0;
+                const invoiceTotal = summary.receivables_total || 0;
+                html += `
+                    <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h4 style="margin: 0 0 10px 0; color: #4caf50;">Invoices</h4>
+                        <p style="font-size: 24px; margin: 0; font-weight: bold;">${invoiceCount}</p>
+                        <p style="color: #666; font-size: 14px; margin: 5px 0 0 0;">$${invoiceTotal.toLocaleString()} due</p>
+                    </div>
+                `;
+
+                // Bills summary (payables)
+                const billCount = summary.payables_count || 0;
+                const billTotal = summary.payables_total || 0;
+                html += `
+                    <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h4 style="margin: 0 0 10px 0; color: #f44336;">Bills</h4>
+                        <p style="font-size: 24px; margin: 0; font-weight: bold;">${billCount}</p>
+                        <p style="color: #666; font-size: 14px; margin: 5px 0 0 0;">$${billTotal.toLocaleString()} owed</p>
+                    </div>
+                `;
+
+                // Repeating invoices
+                const repeatingCount = summary.repeating_invoices || 0;
+                html += `
+                    <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h4 style="margin: 0 0 10px 0; color: #ff9800;">Recurring</h4>
+                        <p style="font-size: 24px; margin: 0; font-weight: bold;">${repeatingCount}</p>
+                        <p style="color: #666; font-size: 14px; margin: 5px 0 0 0;">repeating invoices</p>
+                    </div>
+                `;
+
+                // Bank Balance from Xero
+                html += `
+                    <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h4 style="margin: 0 0 10px 0; color: #2196f3;">Bank Balance</h4>
+                        <p style="font-size: 24px; margin: 0; font-weight: bold;">$${xeroBankBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                        <p style="color: #666; font-size: 14px; margin: 5px 0 0 0;">in Xero</p>
+                    </div>
+                `;
+
+                html += '</div>';
+
+                // Update the buffer preview with the loaded data
+                updateXeroBufferPreview();
+
+                if (contactCount === 0 && invoiceCount === 0 && billCount === 0 && repeatingCount === 0) {
+                    html = `
+                        <div style="text-align: center; padding: 20px; color: #666;">
+                            <p>No data found in your Xero account yet.</p>
+                            <p>You can still proceed - we'll sync any future data automatically.</p>
+                        </div>
+                    `;
+                }
+
+                previewContent.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error loading Xero preview:', error);
+                previewContent.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #dc3545;">
+                        <p>Error loading Xero data: ${error.message}</p>
+                        <p>You can still proceed with the import.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Complete Xero onboarding - sync data and generate forecast
+        async function completeXeroOnboarding() {
+            // Use Xero bank balance (fetched from API during preview)
+            const balance = xeroBankBalance || 0;
+
+            // Ensure cash buffer config is saved before proceeding
+            updateXeroBufferPreview();
+
+            // Show loading
+            const importBtn = document.querySelector('#page5 .btn-primary');
+            const originalText = importBtn.textContent;
+            importBtn.textContent = 'Importing...';
+            importBtn.disabled = true;
+
+            try {
+                // First, update the cash account with Xero's bank balance
+                await authFetch(`${API_BASE}/data/cash-accounts/${currentUserId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        accounts: [{
+                            account_name: 'Xero Bank Account',
+                            balance: balance,
+                            currency: 'USD',
+                            as_of_date: new Date().toISOString().split('T')[0]
+                        }]
+                    })
+                });
+
+                // Sync Xero data
+                const syncResponse = await authFetch(`${API_BASE}/xero/sync`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: currentUserId,
+                        sync_type: 'full'
+                    })
+                });
+
+                if (!syncResponse.ok) {
+                    const error = await syncResponse.json();
+                    throw new Error(error.detail || 'Sync failed');
+                }
+
+                // Mark onboarding as complete
+                await authFetch(`${API_BASE}/auth/complete-onboarding`, {
+                    method: 'POST'
+                });
+
+                // Update local user state
+                if (currentUser) {
+                    currentUser.has_completed_onboarding = true;
+                    localStorage.setItem('tamio_user', JSON.stringify(currentUser));
+                }
+
+                // Now show page 4 (loading/results) and generate forecast
+                document.getElementById('page5').classList.remove('active');
+                document.getElementById('page4').classList.add('active');
+                document.getElementById('loadingSection').classList.remove('hidden');
+                document.getElementById('resultSection').classList.add('hidden');
+
+                // Get forecast
+                const forecastResponse = await authFetch(`${API_BASE}/forecast?user_id=${currentUserId}`);
+
+                if (!forecastResponse.ok) {
+                    throw new Error('Failed to generate forecast');
+                }
+
+                const forecast = await forecastResponse.json();
+                displayForecast(forecast);
+
+            } catch (error) {
+                console.error('Error completing Xero onboarding:', error);
+                alert('Error: ' + error.message);
+                importBtn.textContent = originalText;
+                importBtn.disabled = false;
+            }
+        }
+
+        // Cancel Xero onboarding and switch to manual
+        function cancelXeroOnboarding() {
+            onboardingPath = 'manual';
+            document.getElementById('page5').classList.remove('active');
+            document.getElementById('page0').classList.add('active');
         }
 
         // ============================================================================

@@ -240,6 +240,8 @@ async def preview_xero_data(
     Preview data from Xero before syncing.
     Returns a summary of what would be imported.
     """
+    import traceback
+
     connection = await get_valid_connection(db, user_id)
     if not connection:
         raise HTTPException(
@@ -250,21 +252,53 @@ async def preview_xero_data(
     try:
         xero_client = XeroClient(connection)
 
-        # Get counts of each entity type
-        invoices = xero_client.get_outstanding_invoices()
-        contacts = xero_client.get_contacts(is_customer=True)
-        repeating = xero_client.get_repeating_invoices()
+        # Get data with error handling for each call
+        invoices = []
+        contacts = []
+        repeating = []
+        organisation = {}
+        bank_summary = {"accounts": [], "total_balance": 0}
+
+        try:
+            organisation = xero_client.get_organisation()
+        except Exception as org_err:
+            print(f"Error getting organisation: {org_err}")
+            traceback.print_exc()
+
+        try:
+            invoices = xero_client.get_outstanding_invoices()
+        except Exception as inv_err:
+            print(f"Error getting invoices: {inv_err}")
+            traceback.print_exc()
+
+        try:
+            contacts = xero_client.get_contacts(is_customer=True)
+        except Exception as contact_err:
+            print(f"Error getting contacts: {contact_err}")
+            traceback.print_exc()
+
+        try:
+            repeating = xero_client.get_repeating_invoices()
+        except Exception as rep_err:
+            print(f"Error getting repeating invoices: {rep_err}")
+            traceback.print_exc()
+
+        try:
+            bank_summary = xero_client.get_bank_summary()
+        except Exception as bank_err:
+            print(f"Error getting bank summary: {bank_err}")
+            traceback.print_exc()
 
         # Separate receivables and payables
-        receivables = [i for i in invoices if i["type"] == "ACCREC"]
-        payables = [i for i in invoices if i["type"] == "ACCPAY"]
+        receivables = [i for i in invoices if i.get("type") == "ACCREC"]
+        payables = [i for i in invoices if i.get("type") == "ACCPAY"]
 
         # Calculate totals
-        total_receivables = sum(i["amount_due"] for i in receivables)
-        total_payables = sum(i["amount_due"] for i in payables)
+        total_receivables = sum(i.get("amount_due", 0) for i in receivables)
+        total_payables = sum(i.get("amount_due", 0) for i in payables)
 
         return {
-            "organisation": xero_client.get_organisation(),
+            "organisation": organisation,
             "summary": {
                 "contacts": len(contacts),
                 "outstanding_invoices": len(invoices),
@@ -274,12 +308,15 @@ async def preview_xero_data(
                 "payables_total": total_payables,
                 "repeating_invoices": len(repeating),
             },
-            "sample_contacts": contacts[:5],
-            "sample_receivables": receivables[:5],
-            "sample_payables": payables[:5],
+            "bank_summary": bank_summary,
+            "contacts": contacts[:10],
+            "invoices": receivables[:10],
+            "bills": payables[:10],
+            "repeating_invoices": repeating[:5],
         }
 
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"Error fetching Xero data: {str(e)}"

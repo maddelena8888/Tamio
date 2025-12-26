@@ -12,6 +12,7 @@ from sqlalchemy import select, delete
 from app.xero.client import XeroClient, get_valid_connection
 from app.xero.models import XeroConnection, XeroSyncLog
 from app.data import models as data_models
+from app.data.client_utils import build_canonical_client, update_client_billing_from_repeating_invoice
 
 
 # ============================================================================
@@ -194,12 +195,15 @@ async def sync_contacts(
                 payment_behavior = "unknown"
                 if contact.get("payment_terms"):
                     terms = contact["payment_terms"]
-                    if terms <= 30:
+                    if terms <= 14:
+                        payment_behavior = "on_time"
+                    elif terms <= 30:
                         payment_behavior = "on_time"
                     else:
                         payment_behavior = "delayed"
 
-                new_client = data_models.Client(
+                # Use canonical builder for consistent structure
+                new_client = build_canonical_client(
                     user_id=user_id,
                     name=contact_name,
                     client_type=client_type,
@@ -333,7 +337,7 @@ async def sync_invoices(
 
 
 # ============================================================================
-# REPEATING INVOICE SYNC (RETAINERS)
+# REPEATING INVOICE SYNC (RETAINERS & RECURRING EXPENSES)
 # ============================================================================
 
 async def sync_repeating_invoices(
@@ -342,13 +346,15 @@ async def sync_repeating_invoices(
     xero_client: XeroClient
 ) -> Dict[str, Any]:
     """
-    Sync Xero repeating invoices to detect retainer clients.
+    Sync Xero repeating invoices to:
+    1. Detect retainer clients (ACCREC - recurring revenue)
+    2. Create recurring cash events for both ACCREC and ACCPAY
 
-    Repeating invoices indicate recurring revenue, which maps to
-    Tamio's "retainer" client type.
+    This generates events for weeks 1-13 based on the repeating invoice schedule.
     """
     results = {
         "records_fetched": {"repeating_invoices": 0},
+        "records_created": {"cash_events": 0},
         "records_updated": {"clients": 0},
         "errors": []
     }
@@ -358,7 +364,7 @@ async def sync_repeating_invoices(
         repeating = xero_client.get_repeating_invoices()
         results["records_fetched"]["repeating_invoices"] = len(repeating)
 
-        # Get existing clients
+        # Get existing clients for linking
         clients_result = await db.execute(
             select(data_models.Client).where(
                 data_models.Client.user_id == user_id
@@ -366,29 +372,90 @@ async def sync_repeating_invoices(
         )
         clients_by_name = {c.name.lower(): c for c in clients_result.scalars().all()}
 
+        # Get today for week number calculation
+        today = date.today()
+        week_start = today - timedelta(days=today.weekday())
+
         for inv in repeating:
-            if inv["type"] != "ACCREC":  # Only process receivables
+            is_receivable = inv["type"] == "ACCREC"
+            direction = "in" if is_receivable else "out"
+            amount = Decimal(str(inv.get("total", 0)))
+
+            if amount <= 0:
                 continue
 
-            contact_name = inv.get("contact_name", "").lower()
-            if contact_name in clients_by_name:
-                client = clients_by_name[contact_name]
+            # Only process AUTHORISED repeating invoices
+            if inv.get("status") != "AUTHORISED":
+                continue
 
-                # Update to retainer type
-                client.client_type = "retainer"
+            contact_name = inv.get("contact_name", "")
+            contact_lower = contact_name.lower()
 
-                # Update billing config with Xero schedule
-                schedule = inv.get("schedule", {})
-                billing_config = client.billing_config or {}
-                billing_config.update({
-                    "source": "xero_sync",
-                    "xero_repeating_id": inv.get("repeating_invoice_id"),
-                    "amount": inv.get("total", 0),
-                    "frequency": map_xero_frequency(schedule.get("unit"), schedule.get("period")),
-                })
-                client.billing_config = billing_config
+            # Update client to retainer type if it's a receivable
+            if is_receivable and contact_lower in clients_by_name:
+                client = clients_by_name[contact_lower]
 
+                # Use canonical utility to update billing from repeating invoice
+                update_client_billing_from_repeating_invoice(client, inv)
                 results["records_updated"]["clients"] += 1
+
+            # Get schedule info
+            schedule = inv.get("schedule", {})
+            frequency = map_xero_frequency(schedule.get("unit"), schedule.get("period"))
+
+            # Determine payment interval in days
+            if frequency == "weekly":
+                interval_days = 7
+            elif frequency == "bi-weekly":
+                interval_days = 14
+            elif frequency == "monthly":
+                interval_days = 30
+            elif frequency == "quarterly":
+                interval_days = 91
+            else:
+                interval_days = 30  # Default to monthly
+
+            # Generate events for weeks 1-13 (skip week 0 as one-time invoices cover near-term)
+            # Start from next week to avoid duplicating with outstanding invoices
+            next_payment_date = today + timedelta(days=interval_days)
+
+            events_created = 0
+            while next_payment_date <= today + timedelta(weeks=13):
+                # Calculate week number
+                days_diff = (next_payment_date - week_start).days
+                week_number = max(1, days_diff // 7)
+
+                if week_number > 13:
+                    break
+
+                # Find linked client
+                client_id = None
+                if contact_lower in clients_by_name:
+                    client_id = clients_by_name[contact_lower].id
+
+                # Create recurring cash event
+                event = data_models.CashEvent(
+                    user_id=user_id,
+                    date=next_payment_date,
+                    week_number=week_number,
+                    amount=amount,
+                    direction=direction,
+                    event_type="expected_revenue" if is_receivable else "expected_expense",
+                    category="recurring_invoice" if is_receivable else "recurring_bill",
+                    client_id=client_id,
+                    confidence="high",
+                    confidence_reason=f"Xero repeating invoice - {contact_name}",
+                    is_recurring=True,
+                    recurrence_pattern=frequency,
+                    notes=f"Recurring {frequency} from Xero: {contact_name}"
+                )
+                db.add(event)
+                events_created += 1
+
+                # Move to next payment date
+                next_payment_date += timedelta(days=interval_days)
+
+            results["records_created"]["cash_events"] += events_created
 
         await db.flush()
 

@@ -57,6 +57,11 @@ class CashPositionCreate(BaseModel):
     accounts: List[CashAccountCreate]
 
 
+class CashAccountsUpdate(BaseModel):
+    """Schema for updating cash accounts (user_id from URL)."""
+    accounts: List[CashAccountCreate]
+
+
 class CashPositionResponse(BaseModel):
     """Schema for cash position response."""
     accounts: List[CashAccountResponse]

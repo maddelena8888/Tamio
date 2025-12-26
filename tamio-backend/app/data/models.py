@@ -19,6 +19,8 @@ class User(Base):
 
     id = Column(String, primary_key=True, default=lambda: generate_id("user"))
     email = Column(String, unique=True, nullable=False, index=True)
+    hashed_password = Column(String, nullable=True)  # Nullable for Xero-only users
+    has_completed_onboarding = Column(Boolean, nullable=False, default=False)
     base_currency = Column(String, nullable=False, default="USD")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

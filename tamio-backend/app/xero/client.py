@@ -51,8 +51,6 @@ def generate_state() -> str:
 
 def create_api_client(access_token: str) -> ApiClient:
     """Create a configured Xero API client."""
-    configuration = Configuration()
-
     # Create OAuth2 token object
     oauth2_token = OAuth2Token(
         client_id=settings.XERO_CLIENT_ID,
@@ -60,10 +58,22 @@ def create_api_client(access_token: str) -> ApiClient:
     )
     oauth2_token.access_token = access_token
 
-    api_client = ApiClient(
-        configuration,
+    # Configuration with oauth2_token
+    configuration = Configuration(
         oauth2_token=oauth2_token
     )
+
+    api_client = ApiClient(configuration)
+
+    # Set up token getter - required by the SDK for auth
+    @api_client.oauth2_token_getter
+    def obtain_xero_oauth2_token():
+        return {
+            "access_token": access_token,
+            "token_type": "Bearer",
+            "expires_in": 1800,  # 30 minutes (Xero default)
+            "scope": settings.XERO_SCOPES
+        }
 
     return api_client
 
@@ -218,7 +228,7 @@ class XeroClient:
 
     def get_invoices(
         self,
-        status: Optional[str] = None,
+        statuses: Optional[List[str]] = None,
         where: Optional[str] = None,
         page: int = 1
     ) -> List[Dict[str, Any]]:
@@ -226,27 +236,39 @@ class XeroClient:
         Get invoices from Xero.
 
         Args:
-            status: Filter by status (DRAFT, SUBMITTED, AUTHORISED, PAID, etc.)
+            statuses: Filter by statuses (DRAFT, SUBMITTED, AUTHORISED, PAID, etc.)
             where: Xero filter expression
             page: Page number for pagination
         """
         invoices = []
 
-        response = self.accounting_api.get_invoices(
-            self.tenant_id,
-            statuses=[status] if status else None,
-            where=where,
-            page=page
-        )
+        # Build kwargs to avoid passing None values
+        kwargs = {"xero_tenant_id": self.tenant_id, "page": page}
+        if statuses:
+            kwargs["statuses"] = statuses
+        if where:
+            kwargs["where"] = where
+
+        response = self.accounting_api.get_invoices(**kwargs)
 
         for inv in response.invoices or []:
+            # Convert type enum to string if needed
+            inv_type = inv.type
+            if hasattr(inv_type, 'value'):
+                inv_type = inv_type.value
+
+            # Convert status enum to string if needed
+            inv_status = inv.status
+            if hasattr(inv_status, 'value'):
+                inv_status = inv_status.value
+
             invoices.append({
                 "invoice_id": inv.invoice_id,
                 "invoice_number": inv.invoice_number,
                 "contact_name": inv.contact.name if inv.contact else None,
                 "contact_id": inv.contact.contact_id if inv.contact else None,
-                "type": inv.type,  # ACCREC or ACCPAY
-                "status": inv.status,
+                "type": inv_type,  # ACCREC or ACCPAY
+                "status": inv_status,
                 "amount_due": float(inv.amount_due or 0),
                 "total": float(inv.total or 0),
                 "currency_code": inv.currency_code,
@@ -268,13 +290,14 @@ class XeroClient:
 
     def get_outstanding_invoices(self) -> List[Dict[str, Any]]:
         """Get all outstanding (unpaid) invoices."""
-        # Get receivables (money coming in)
-        receivables = self.get_invoices(where='Type=="ACCREC" AND AmountDue>0')
+        # Get all AUTHORISED invoices (outstanding) - these have amount due > 0
+        # The statuses filter uses specific status values
+        all_invoices = self.get_invoices(statuses=["AUTHORISED", "SUBMITTED"])
 
-        # Get payables (money going out)
-        payables = self.get_invoices(where='Type=="ACCPAY" AND AmountDue>0')
+        # Filter to only those with amount due
+        outstanding = [inv for inv in all_invoices if inv["amount_due"] > 0]
 
-        return receivables + payables
+        return outstanding
 
     # -------------------------------------------------------------------------
     # Contacts
@@ -307,19 +330,104 @@ class XeroClient:
             if contact.payment_terms and contact.payment_terms.sales:
                 payment_terms = contact.payment_terms.sales.day
 
+            # Convert CurrencyCode enum to string if present
+            currency = None
+            if contact.default_currency:
+                currency = contact.default_currency.value if hasattr(contact.default_currency, 'value') else str(contact.default_currency)
+
             contacts.append({
                 "contact_id": contact.contact_id,
                 "name": contact.name,
                 "email": contact.email_address,
                 "is_customer": contact.is_customer,
                 "is_supplier": contact.is_supplier,
-                "default_currency": contact.default_currency,
+                "default_currency": currency,
                 "payment_terms": payment_terms,
                 "account_number": contact.account_number,
                 "contact_status": contact.contact_status,
             })
 
         return contacts
+
+    # -------------------------------------------------------------------------
+    # Bank Accounts
+    # -------------------------------------------------------------------------
+
+    def get_bank_accounts(self) -> List[Dict[str, Any]]:
+        """Get bank accounts from Xero with their current balances."""
+        accounts = []
+
+        # Get accounts of type BANK
+        response = self.accounting_api.get_accounts(
+            self.tenant_id,
+            where='Type=="BANK"'
+        )
+
+        for account in response.accounts or []:
+            # Convert currency enum to string if needed
+            currency = account.currency_code
+            if hasattr(currency, 'value'):
+                currency = currency.value
+
+            accounts.append({
+                "account_id": account.account_id,
+                "name": account.name,
+                "code": account.code,
+                "type": account.type,
+                "bank_account_number": account.bank_account_number,
+                "currency_code": currency,
+                "status": account.status,
+                # Note: Balance requires a separate report call
+            })
+
+        return accounts
+
+    def get_bank_summary(self) -> Dict[str, Any]:
+        """Get bank account summary with balances from the Bank Summary report."""
+        try:
+            response = self.accounting_api.get_report_bank_summary(self.tenant_id)
+
+            accounts = []
+            total_balance = 0
+
+            if response.reports and response.reports[0].rows:
+                for row in response.reports[0].rows:
+                    # Check for SECTION row type (can be enum or string)
+                    row_type_str = str(row.row_type).upper() if row.row_type else ""
+                    is_section = "SECTION" in row_type_str
+
+                    if is_section and row.rows:
+                        for detail_row in row.rows:
+                            detail_type_str = str(detail_row.row_type).upper() if detail_row.row_type else ""
+                            # Look for ROW type but not SUMMARYROW
+                            is_data_row = "ROW" in detail_type_str and "SUMMARY" not in detail_type_str
+
+                            if is_data_row and detail_row.cells:
+                                cells = detail_row.cells
+                                account_name = cells[0].value if len(cells) > 0 else None
+                                # The balance is in the last column ("Balance in Xero")
+                                balance = 0
+                                if len(cells) > 1:
+                                    try:
+                                        balance = float(cells[-1].value or 0)
+                                    except (ValueError, TypeError):
+                                        balance = 0
+
+                                if account_name and account_name.lower() not in ['total', '']:
+                                    accounts.append({
+                                        "name": account_name,
+                                        "balance": balance
+                                    })
+                                    total_balance += balance
+
+            return {
+                "accounts": accounts,
+                "total_balance": total_balance
+            }
+        except Exception as e:
+            # If report fails, return empty (but log the error)
+            print(f"Error getting bank summary: {e}")
+            return {"accounts": [], "total_balance": 0}
 
     # -------------------------------------------------------------------------
     # Bank Transactions

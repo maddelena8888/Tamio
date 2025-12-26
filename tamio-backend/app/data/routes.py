@@ -9,6 +9,7 @@ from decimal import Decimal
 from app.database import get_db
 from app.data import models, schemas
 from app.data.event_generator import generate_events_from_client, generate_events_from_bucket
+from app.data.migration import backfill_client_canonical_structure
 
 router = APIRouter()
 
@@ -90,6 +91,51 @@ async def get_cash_position(
         select(models.CashAccount).where(models.CashAccount.user_id == user_id)
     )
     accounts = result.scalars().all()
+
+    total = sum(acc.balance for acc in accounts)
+
+    return schemas.CashPositionResponse(
+        accounts=accounts,
+        total_starting_cash=total
+    )
+
+
+@router.put("/cash-accounts/{user_id}", response_model=schemas.CashPositionResponse)
+async def update_cash_accounts(
+    user_id: str,
+    data: schemas.CashAccountsUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update cash accounts for a user (replaces all existing accounts)."""
+    # Verify user exists
+    result = await db.execute(
+        select(models.User).where(models.User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Delete existing accounts
+    await db.execute(
+        delete(models.CashAccount).where(models.CashAccount.user_id == user_id)
+    )
+
+    # Create new accounts
+    accounts = []
+    for acc_data in data.accounts:
+        account = models.CashAccount(
+            user_id=user_id,
+            account_name=acc_data.account_name,
+            balance=acc_data.balance,
+            currency=acc_data.currency,
+            as_of_date=acc_data.as_of_date
+        )
+        db.add(account)
+        accounts.append(account)
+
+    await db.commit()
+    for acc in accounts:
+        await db.refresh(acc)
 
     total = sum(acc.balance for acc in accounts)
 
@@ -517,3 +563,27 @@ async def regenerate_all_events(
         "clients_processed": len(clients),
         "expenses_processed": len(buckets)
     }
+
+
+# ============================================================================
+# DATA MIGRATION ROUTES
+# ============================================================================
+
+@router.post("/migrate/backfill-clients")
+async def migrate_backfill_clients(
+    user_id: str = Query(..., description="User ID to migrate clients for"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Backfill canonical structure on existing clients.
+
+    This endpoint ensures all clients have:
+    - payment_behavior (defaults to "unknown")
+    - churn_risk (defaults to "low")
+    - scope_risk (defaults to "low")
+    - billing_config with proper structure and "source" field
+
+    Use this after upgrading to canonical client structure.
+    """
+    stats = await backfill_client_canonical_structure(db, user_id)
+    return stats
