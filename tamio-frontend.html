@@ -601,6 +601,52 @@
             0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
             30% { transform: translateY(-4px); opacity: 1; }
         }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #28a745;
+            transition: 0.4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #f44336;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
     </style>
 </head>
 <body>
@@ -845,40 +891,57 @@
         <!-- Page 3: Expenses (Cash Out) -->
         <div class="page" id="page3">
             <h2>Page 3: Cash Out (Expenses)</h2>
-            <p class="subtitle">Add your expense buckets</p>
+            <p class="subtitle">Add your expense buckets - group costs by type, not individual vendors</p>
+            <p style="font-size: 14px; color: #666; margin-bottom: 30px;">
+                💡 <strong>Tip:</strong> Think in buckets, not line items. You can break these down into individual vendors later if needed.
+            </p>
 
             <div id="expensesList"></div>
 
+            <!-- Expense Bucket Type Selector -->
+            <div style="margin-bottom: 25px; background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                <label style="font-weight: 600; margin-bottom: 10px; display: block;">Bucket Type</label>
+                <div class="row">
+                    <label style="display: flex; align-items: center; cursor: pointer; padding: 12px; background: white; border-radius: 6px; border: 2px solid #ddd; margin-right: 10px;">
+                        <input type="radio" name="bucketTypeGroup" value="fixed" checked onchange="updateExpenseForm()" style="margin-right: 8px;">
+                        <div>
+                            <strong>Fixed / Hard to Change</strong>
+                            <br><small style="color: #666;">Payroll, Rent, Debt, Taxes</small>
+                        </div>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer; padding: 12px; background: white; border-radius: 6px; border: 2px solid #ddd;">
+                        <input type="radio" name="bucketTypeGroup" value="variable" onchange="updateExpenseForm()" style="margin-right: 8px;">
+                        <div>
+                            <strong>Variable / Adjustable</strong>
+                            <br><small style="color: #666;">Contractors, Software, Marketing</small>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label>Expense Name</label>
-                <input type="text" id="expenseName" placeholder="e.g., Payroll">
+                <input type="text" id="expenseName" placeholder="e.g., Employee Salaries">
             </div>
 
             <div class="row">
                 <div class="form-group">
                     <label>Category</label>
-                    <select id="expenseCategory">
-                        <option value="payroll">Payroll</option>
-                        <option value="rent">Rent</option>
-                        <option value="contractors">Contractors</option>
-                        <option value="software">Software</option>
-                        <option value="marketing">Marketing</option>
-                        <option value="other">Other</option>
+                    <select id="expenseCategory" onchange="updateExpenseCategoryFields()">
+                        <optgroup label="Fixed / Hard to Change">
+                            <option value="payroll">Payroll (employees)</option>
+                            <option value="rent">Rent / Office</option>
+                            <option value="other_fixed">Debt repayments</option>
+                            <option value="other_fixed">Taxes</option>
+                            <option value="other_fixed">Other fixed costs</option>
+                        </optgroup>
+                        <optgroup label="Variable / Adjustable">
+                            <option value="contractors">Contractors / Freelancers</option>
+                            <option value="software">Software & Tools</option>
+                            <option value="marketing">Marketing / Growth</option>
+                            <option value="other">Other variable costs</option>
+                        </optgroup>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label>Type</label>
-                    <select id="expenseType">
-                        <option value="fixed">Fixed</option>
-                        <option value="variable">Variable</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="form-group">
-                    <label>Monthly Amount</label>
-                    <input type="number" id="expenseAmount" placeholder="25000" step="0.01">
                 </div>
                 <div class="form-group">
                     <label>Priority</label>
@@ -890,6 +953,48 @@
                 </div>
             </div>
 
+            <!-- Employee Count (only for payroll) -->
+            <div class="row" id="employeeCountRow" style="display: none;">
+                <div class="form-group">
+                    <label>Number of Employees</label>
+                    <input type="number" id="employeeCount" placeholder="5" min="1">
+                    <small style="color: #666; font-size: 12px;">Used to improve scenario realism (e.g., hiring freezes, layoffs)</small>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label>Monthly Amount</label>
+                    <input type="number" id="expenseAmount" placeholder="25000" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Currency</label>
+                    <select id="expenseCurrency">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Stability Toggle -->
+            <div class="form-group">
+                <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #ddd;">
+                    <div>
+                        <strong>Stability</strong>
+                        <br><small style="color: #666;">Does this amount stay roughly the same each month?</small>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span id="stabilityLabel" style="font-weight: 600; color: #28a745;">Stable</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="expenseStability" onchange="updateStabilityLabel()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Timing -->
             <div class="row">
                 <div class="form-group">
                     <label>Payment Due Day of Month</label>
@@ -904,15 +1009,12 @@
                     <label>Payment Frequency</label>
                     <select id="expenseFrequency">
                         <option value="monthly" selected>Monthly</option>
-                        <option value="bi-weekly">Bi-weekly</option>
+                        <option value="bi_weekly">Bi-weekly</option>
                         <option value="weekly">Weekly</option>
                         <option value="quarterly">Quarterly</option>
                     </select>
                 </div>
             </div>
-            <p style="font-size: 12px; color: #666; margin-top: -10px; margin-bottom: 15px;">
-                💡 When is this expense typically due each month? This helps us accurately forecast cash outflows.
-            </p>
 
             <button class="btn btn-add" onclick="addExpense()">+ Add Expense Bucket</button>
 
@@ -999,7 +1101,7 @@
                     <div class="scenario-banner hidden" id="scenarioBanner">
                         <span>📊 <strong>Scenario Mode:</strong> <span id="scenarioBannerName">Viewing scenario</span></span>
                         <div class="scenario-banner-actions">
-                            <button class="scenario-banner-btn apply" onclick="tamiConfirmScenario()">✓ Confirm</button>
+                            <button class="scenario-banner-btn apply" onclick="tamiSaveScenario()">💾 Save</button>
                             <button class="scenario-banner-btn discard" onclick="tamiDiscardScenario()">✗ Discard</button>
                         </div>
                     </div>
@@ -1048,7 +1150,8 @@
                     <!-- Data Tabs -->
                     <div class="chart-tabs" style="margin-bottom: 20px;">
                         <button class="chart-tab active" id="clientsTab" onclick="showDataTab('clients')">👥 Clients</button>
-                        <button class="chart-tab" id="expensesTab" onclick="showDataTab('expenses')">💸 Expenses</button>
+                        <button class="chart-tab" id="expensesTab" onclick="showDataTab('expenses')">💸 Expense Buckets</button>
+                        <button class="chart-tab" id="obligationsTab" onclick="showDataTab('obligations')">📋 Obligations</button>
                         <button class="chart-tab" id="integrationsTab" onclick="showDataTab('integrations')">🔗 Integrations</button>
                     </div>
 
@@ -1122,7 +1225,10 @@
 
                             <div id="manageBillingConfigSection"></div>
 
-                            <button class="btn btn-add" onclick="addManagedClient()">+ Add Client</button>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-add" onclick="addManagedClient()">+ Add Client</button>
+                                <button class="btn btn-secondary" id="cancelClientEditBtn" onclick="cancelClientEdit()" style="display: none;">Cancel</button>
+                            </div>
                         </div>
                     </div>
 
@@ -1195,7 +1301,114 @@
                                 </div>
                             </div>
 
-                            <button class="btn btn-add" onclick="addManagedExpense()">+ Add Expense</button>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-add" onclick="addManagedExpense()">+ Add Expense</button>
+                                <button class="btn btn-secondary" id="cancelExpenseEditBtn" onclick="cancelExpenseEdit()" style="display: none;">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Obligations Management (Progressive Disclosure) -->
+                    <div id="manageObligationsSection" style="display: none;">
+                        <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196f3;">
+                            <h4 style="margin-top: 0; color: #1976d2;">💡 Progressive Disclosure</h4>
+                            <p style="margin: 0; color: #555;">
+                                Expand your expense buckets into individual vendors and contracts. This gives you:
+                                <br>• More accurate payment schedules
+                                <br>• Better visibility into specific obligations
+                                <br>• Ability to track actual payments against estimates
+                            </p>
+                        </div>
+
+                        <div id="obligationsList" style="margin-bottom: 20px;"></div>
+
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin-top: 0;">+ Create New Obligation</h4>
+
+                            <div class="form-group">
+                                <label>Vendor/Obligation Name</label>
+                                <input type="text" id="obligationVendorName" placeholder="e.g., Stripe (Software)">
+                            </div>
+
+                            <div class="row">
+                                <div class="form-group">
+                                    <label>Obligation Type</label>
+                                    <select id="obligationType">
+                                        <option value="subscription">Subscription (SaaS)</option>
+                                        <option value="vendor_bill">Vendor Bill</option>
+                                        <option value="payroll">Payroll</option>
+                                        <option value="contractor">Contractor</option>
+                                        <option value="lease">Rent/Lease</option>
+                                        <option value="loan_payment">Loan Payment</option>
+                                        <option value="tax_obligation">Tax Obligation</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Category</label>
+                                    <select id="obligationCategory">
+                                        <option value="software">Software</option>
+                                        <option value="contractors">Contractors</option>
+                                        <option value="payroll">Payroll</option>
+                                        <option value="rent">Rent</option>
+                                        <option value="marketing">Marketing</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="form-group">
+                                    <label>Amount Type</label>
+                                    <select id="obligationAmountType">
+                                        <option value="fixed">Fixed (same every time)</option>
+                                        <option value="variable">Variable (changes)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Monthly Amount</label>
+                                    <input type="number" id="obligationAmount" placeholder="120" step="0.01">
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="form-group">
+                                    <label>Frequency</label>
+                                    <select id="obligationFrequency">
+                                        <option value="monthly" selected>Monthly</option>
+                                        <option value="quarterly">Quarterly</option>
+                                        <option value="annually">Annually</option>
+                                        <option value="bi_weekly">Bi-weekly</option>
+                                        <option value="one_time">One-time</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Currency</label>
+                                    <select id="obligationCurrency">
+                                        <option value="USD">USD</option>
+                                        <option value="EUR">EUR</option>
+                                        <option value="GBP">GBP</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="form-group">
+                                    <label>Start Date</label>
+                                    <input type="date" id="obligationStartDate">
+                                </div>
+                                <div class="form-group">
+                                    <label>End Date (optional)</label>
+                                    <input type="date" id="obligationEndDate" placeholder="Leave empty for ongoing">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Notes</label>
+                                <textarea id="obligationNotes" rows="2" placeholder="Additional details about this obligation..."></textarea>
+                            </div>
+
+                            <button class="btn btn-add" onclick="createObligation()">+ Create Obligation</button>
                         </div>
                     </div>
 
@@ -2076,31 +2289,75 @@
             }).join('');
         }
 
-        // Page 3: Expenses
+        // Page 3: Expenses - Helper Functions
+        function updateStabilityLabel() {
+            const isVariable = document.getElementById('expenseStability').checked;
+            const label = document.getElementById('stabilityLabel');
+
+            if (isVariable) {
+                label.textContent = 'Varies month to month';
+                label.style.color = '#f44336';
+            } else {
+                label.textContent = 'Stable';
+                label.style.color = '#28a745';
+            }
+        }
+
+        function updateExpenseCategoryFields() {
+            const category = document.getElementById('expenseCategory').value;
+            const employeeCountRow = document.getElementById('employeeCountRow');
+
+            // Show employee count field only for payroll
+            if (category === 'payroll') {
+                employeeCountRow.style.display = 'block';
+            } else {
+                employeeCountRow.style.display = 'none';
+            }
+        }
+
+        function updateExpenseForm() {
+            const bucketType = document.querySelector('input[name="bucketTypeGroup"]:checked').value;
+            const categorySelect = document.getElementById('expenseCategory');
+
+            // Update category dropdown based on bucket type
+            if (bucketType === 'fixed') {
+                categorySelect.value = 'payroll';
+            } else {
+                categorySelect.value = 'contractors';
+            }
+
+            updateExpenseCategoryFields();
+        }
+
         function addExpense() {
             const name = document.getElementById('expenseName').value;
             const category = document.getElementById('expenseCategory').value;
-            const type = document.getElementById('expenseType').value;
+            const bucketType = document.querySelector('input[name="bucketTypeGroup"]:checked').value;
             const amount = parseFloat(document.getElementById('expenseAmount').value);
+            const currency = document.getElementById('expenseCurrency').value;
             const priority = document.getElementById('expensePriority').value;
+            const isStable = !document.getElementById('expenseStability').checked; // Inverted: checked = varies
             const dueDay = parseInt(document.getElementById('expenseDueDay').value, 10);
             const frequency = document.getElementById('expenseFrequency').value;
+            const employeeCount = category === 'payroll' ? parseInt(document.getElementById('employeeCount').value) || null : null;
 
             if (!name || !amount) {
-                alert('Please fill in expense details');
+                alert('Please fill in expense name and amount');
                 return;
             }
 
             expenses.push({
                 name: name,
                 category: category,
-                bucket_type: type,
+                bucket_type: bucketType,
                 monthly_amount: amount,
-                currency: 'USD',
+                currency: currency,
                 priority: priority,
-                is_stable: true,
+                is_stable: isStable,
                 due_day: dueDay,
-                frequency: frequency
+                frequency: frequency,
+                employee_count: employeeCount,
+                notes: null
             });
 
             renderExpenses();
@@ -2108,6 +2365,11 @@
             // Clear form
             document.getElementById('expenseName').value = '';
             document.getElementById('expenseAmount').value = '';
+            if (employeeCount !== null) {
+                document.getElementById('employeeCount').value = '';
+            }
+            document.getElementById('expenseStability').checked = false;
+            updateStabilityLabel();
         }
 
         function removeExpense(index) {
@@ -2122,6 +2384,10 @@
                 const dueDay = expense.due_day || 15;
                 const dueDayLabel = dueDay === 31 ? 'Last day' : `Day ${dueDay}`;
                 const freq = expense.frequency || 'monthly';
+                const stabilityLabel = expense.is_stable ? '✓ Stable' : '~ Varies';
+                const stabilityColor = expense.is_stable ? '#28a745' : '#f44336';
+                const bucketTypeLabel = expense.bucket_type === 'fixed' ? '🔒 Fixed' : '🔓 Variable';
+                const employeeInfo = expense.employee_count ? ` • ${expense.employee_count} employees` : '';
 
                 return `
                     <div class="card">
@@ -2129,8 +2395,16 @@
                             <span class="card-title">${expense.name}</span>
                             <button class="btn btn-remove" onclick="removeExpense(${i})">Remove</button>
                         </div>
-                        <div>${expense.category} • $${expense.monthly_amount.toLocaleString()}/${freq} • Priority: ${expense.priority}</div>
-                        <div><small style="color: #666;">Due: ${dueDayLabel} of month</small></div>
+                        <div style="margin-bottom: 5px;">
+                            <strong>${expense.category}</strong> • ${expense.currency} $${expense.monthly_amount.toLocaleString()}/${freq}
+                            ${employeeInfo}
+                        </div>
+                        <div style="display: flex; gap: 15px; font-size: 13px; color: #666;">
+                            <span>${bucketTypeLabel}</span>
+                            <span>Priority: ${expense.priority}</span>
+                            <span style="color: ${stabilityColor};">${stabilityLabel}</span>
+                            <span>Due: ${dueDayLabel}</span>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -2652,13 +2926,16 @@
 
         let managedClients = [];
         let managedExpenses = [];
+        let managedObligations = [];
 
         function showDataTab(tab) {
             document.getElementById('clientsTab').classList.remove('active');
             document.getElementById('expensesTab').classList.remove('active');
+            document.getElementById('obligationsTab').classList.remove('active');
             document.getElementById('integrationsTab').classList.remove('active');
             document.getElementById('manageClientsSection').style.display = 'none';
             document.getElementById('manageExpensesSection').style.display = 'none';
+            document.getElementById('manageObligationsSection').style.display = 'none';
             document.getElementById('manageIntegrationsSection').style.display = 'none';
 
             if (tab === 'clients') {
@@ -2667,6 +2944,10 @@
             } else if (tab === 'expenses') {
                 document.getElementById('expensesTab').classList.add('active');
                 document.getElementById('manageExpensesSection').style.display = 'block';
+            } else if (tab === 'obligations') {
+                document.getElementById('obligationsTab').classList.add('active');
+                document.getElementById('manageObligationsSection').style.display = 'block';
+                loadObligations(); // Load obligations when tab is opened
             } else if (tab === 'integrations') {
                 document.getElementById('integrationsTab').classList.add('active');
                 document.getElementById('manageIntegrationsSection').style.display = 'block';
@@ -2705,6 +2986,9 @@
             }
 
             list.innerHTML = managedClients.map((client, i) => {
+                const isXeroSynced = client.billing_config && client.billing_config.source === 'xero_sync';
+                const xeroBadge = isXeroSynced ? '<span style="background: #13B5EA; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">Xero</span>' : '';
+
                 let details = `Type: ${client.client_type} • ${client.currency} • ${client.status}`;
 
                 if (client.client_type === 'retainer' && client.billing_config) {
@@ -2722,7 +3006,7 @@
                 return `
                     <div class="card">
                         <div class="card-header">
-                            <span class="card-title">${client.name}</span>
+                            <span class="card-title">${client.name}${xeroBadge}</span>
                             <div>
                                 <button class="btn btn-secondary" onclick="editManagedClient('${client.id}')" style="margin-right: 5px; padding: 5px 10px; font-size: 12px;">Edit</button>
                                 <button class="btn btn-remove" onclick="deleteManagedClient('${client.id}')">Delete</button>
@@ -2910,8 +3194,14 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE}/data/clients`, {
-                    method: 'POST',
+                const isEditing = !!editingClientId;
+                const url = isEditing
+                    ? `${API_BASE}/data/clients/${editingClientId}`
+                    : `${API_BASE}/data/clients`;
+                const method = isEditing ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         user_id: currentUserId,
@@ -2927,15 +3217,34 @@
                 });
 
                 if (response.ok) {
+                    // Clear form
                     document.getElementById('manageClientName').value = '';
+
+                    // Re-enable all fields (in case they were disabled for Xero-synced client)
+                    document.getElementById('manageClientName').disabled = false;
+                    document.getElementById('manageClientType').disabled = false;
+                    document.getElementById('manageClientName').style.backgroundColor = '';
+                    document.getElementById('manageClientType').style.backgroundColor = '';
+
+                    // Remove info banner if it exists
+                    const infoBanner = document.getElementById('xeroSyncInfoBanner');
+                    if (infoBanner) infoBanner.remove();
+
+                    // Reset edit mode
+                    editingClientId = null;
+                    const btn = document.querySelector('button[onclick="addManagedClient()"]');
+                    btn.textContent = '+ Add Client';
+                    btn.style.backgroundColor = '';
+                    document.getElementById('cancelClientEditBtn').style.display = 'none';
+
                     await loadManagedData();
-                    alert('Client added successfully!');
+                    alert(isEditing ? 'Client updated successfully!' : 'Client added successfully!');
                 } else {
-                    alert('Error adding client');
+                    alert(isEditing ? 'Error updating client' : 'Error adding client');
                 }
             } catch (error) {
-                console.error('Error adding client:', error);
-                alert('Error adding client');
+                console.error('Error saving client:', error);
+                alert('Error saving client');
             }
         }
 
@@ -2961,8 +3270,169 @@
             }
         }
 
+        let editingClientId = null;
+
         function editManagedClient(clientId) {
-            alert('Edit functionality coming soon! For now, delete and re-add the client.');
+            const client = managedClients.find(c => c.id === clientId);
+            if (!client) return;
+
+            // Set edit mode
+            editingClientId = clientId;
+
+            // Check if this is a Xero-synced client
+            const isXeroSynced = client.billing_config && client.billing_config.source === 'xero_sync';
+
+            // Populate form fields
+            document.getElementById('manageClientName').value = client.name;
+            document.getElementById('manageClientType').value = client.client_type;
+            document.getElementById('manageClientCurrency').value = client.currency;
+            document.getElementById('managePaymentBehavior').value = client.payment_behavior || 'unknown';
+            document.getElementById('manageChurnRisk').value = client.churn_risk || 'low';
+            document.getElementById('manageScopeRisk').value = client.scope_risk || 'low';
+            document.getElementById('manageClientStatus').value = client.status || 'active';
+
+            // Lock client type and name for Xero-synced clients (keep Xero as source of truth)
+            const clientTypeInput = document.getElementById('manageClientType');
+            const clientNameInput = document.getElementById('manageClientName');
+            if (isXeroSynced) {
+                clientTypeInput.disabled = true;
+                clientNameInput.disabled = true;
+                clientTypeInput.style.backgroundColor = '#f0f0f0';
+                clientNameInput.style.backgroundColor = '#f0f0f0';
+            } else {
+                clientTypeInput.disabled = false;
+                clientNameInput.disabled = false;
+                clientTypeInput.style.backgroundColor = '';
+                clientNameInput.style.backgroundColor = '';
+            }
+
+            // Update billing config UI
+            updateManageBillingConfig();
+
+            // Populate billing config fields based on type
+            if (client.client_type === 'retainer' && client.billing_config) {
+                setTimeout(() => {
+                    const amountInput = document.getElementById('manageBillingAmount');
+                    const frequencyInput = document.getElementById('manageBillingFrequency');
+                    const invoiceDayInput = document.getElementById('manageInvoiceDay');
+                    const paymentTermsInput = document.getElementById('managePaymentTerms');
+
+                    frequencyInput.value = client.billing_config.frequency || 'monthly';
+                    amountInput.value = client.billing_config.amount || '';
+                    invoiceDayInput.value = client.billing_config.invoice_day || 1;
+                    paymentTermsInput.value = client.billing_config.payment_terms || 'net_30';
+
+                    // Lock billing fields if Xero-synced
+                    if (isXeroSynced) {
+                        amountInput.disabled = true;
+                        frequencyInput.disabled = true;
+                        invoiceDayInput.disabled = true;
+                        paymentTermsInput.disabled = true;
+                        amountInput.style.backgroundColor = '#f0f0f0';
+                        frequencyInput.style.backgroundColor = '#f0f0f0';
+                        invoiceDayInput.style.backgroundColor = '#f0f0f0';
+                        paymentTermsInput.style.backgroundColor = '#f0f0f0';
+                    }
+                }, 100);
+            } else if (client.client_type === 'project' && client.billing_config) {
+                setTimeout(() => {
+                    const projectValueInput = document.getElementById('manageProjectValue');
+                    const depositAmountInput = document.getElementById('manageDepositAmount');
+                    const depositDateInput = document.getElementById('manageDepositDate');
+
+                    projectValueInput.value = client.billing_config.total_value || '';
+                    if (client.billing_config.milestones && client.billing_config.milestones.length > 0) {
+                        depositAmountInput.value = client.billing_config.milestones[0].amount || '';
+                        depositDateInput.value = client.billing_config.milestones[0].expected_date || '';
+                    }
+
+                    // Lock billing fields if Xero-synced
+                    if (isXeroSynced) {
+                        projectValueInput.disabled = true;
+                        depositAmountInput.disabled = true;
+                        depositDateInput.disabled = true;
+                        projectValueInput.style.backgroundColor = '#f0f0f0';
+                        depositAmountInput.style.backgroundColor = '#f0f0f0';
+                        depositDateInput.style.backgroundColor = '#f0f0f0';
+                    }
+                }, 100);
+            } else if (client.client_type === 'usage' && client.billing_config) {
+                setTimeout(() => {
+                    const settlementFreqInput = document.getElementById('manageSettlementFrequency');
+                    const typicalAmountInput = document.getElementById('manageTypicalAmount');
+
+                    settlementFreqInput.value = client.billing_config.settlement_frequency || 'monthly';
+                    typicalAmountInput.value = client.billing_config.typical_amount || '';
+
+                    // Lock billing fields if Xero-synced
+                    if (isXeroSynced) {
+                        settlementFreqInput.disabled = true;
+                        typicalAmountInput.disabled = true;
+                        settlementFreqInput.style.backgroundColor = '#f0f0f0';
+                        typicalAmountInput.style.backgroundColor = '#f0f0f0';
+                    }
+                }, 100);
+            }
+
+            // Update button
+            const btn = document.querySelector('button[onclick="addManagedClient()"]');
+            btn.textContent = 'Update Client';
+            btn.style.backgroundColor = '#ff9800';
+
+            // Show cancel button
+            document.getElementById('cancelClientEditBtn').style.display = 'block';
+
+            // Show info message if Xero-synced
+            if (isXeroSynced) {
+                // Add info banner if it doesn't exist
+                let infoBanner = document.getElementById('xeroSyncInfoBanner');
+                if (!infoBanner) {
+                    infoBanner = document.createElement('div');
+                    infoBanner.id = 'xeroSyncInfoBanner';
+                    infoBanner.style.cssText = 'background: #e3f2fd; color: #1976d2; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #13B5EA;';
+                    infoBanner.innerHTML = '<strong>🔒 Xero Synced:</strong> Billing amounts and client name are locked to keep Xero as source of truth. You can still update risk indicators and status.';
+
+                    const form = document.querySelector('#manageClientsSection > div:last-child');
+                    form.insertBefore(infoBanner, form.firstChild);
+                }
+            }
+
+            // Scroll to form
+            document.querySelector('#manageClientsSection .btn-add').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function cancelClientEdit() {
+            // Reset edit mode
+            editingClientId = null;
+
+            // Clear form
+            document.getElementById('manageClientName').value = '';
+            document.getElementById('manageClientType').value = 'retainer';
+            document.getElementById('manageClientCurrency').value = 'USD';
+            document.getElementById('managePaymentBehavior').value = 'unknown';
+            document.getElementById('manageChurnRisk').value = 'low';
+            document.getElementById('manageScopeRisk').value = 'low';
+            document.getElementById('manageClientStatus').value = 'active';
+
+            // Re-enable all fields (in case they were disabled for Xero-synced client)
+            document.getElementById('manageClientName').disabled = false;
+            document.getElementById('manageClientType').disabled = false;
+            document.getElementById('manageClientName').style.backgroundColor = '';
+            document.getElementById('manageClientType').style.backgroundColor = '';
+
+            // Remove info banner if it exists
+            const infoBanner = document.getElementById('xeroSyncInfoBanner');
+            if (infoBanner) infoBanner.remove();
+
+            updateManageBillingConfig();
+
+            // Reset button
+            const btn = document.querySelector('button[onclick="addManagedClient()"]');
+            btn.textContent = '+ Add Client';
+            btn.style.backgroundColor = '';
+
+            // Hide cancel button
+            document.getElementById('cancelClientEditBtn').style.display = 'none';
         }
 
         async function addManagedExpense() {
@@ -2980,8 +3450,14 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE}/data/expenses`, {
-                    method: 'POST',
+                const isEditing = !!editingExpenseId;
+                const url = isEditing
+                    ? `${API_BASE}/data/expenses/${editingExpenseId}`
+                    : `${API_BASE}/data/expenses`;
+                const method = isEditing ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         user_id: currentUserId,
@@ -2998,16 +3474,25 @@
                 });
 
                 if (response.ok) {
+                    // Clear form
                     document.getElementById('manageExpenseName').value = '';
                     document.getElementById('manageExpenseAmount').value = '';
+
+                    // Reset edit mode
+                    editingExpenseId = null;
+                    const btn = document.querySelector('button[onclick="addManagedExpense()"]');
+                    btn.textContent = '+ Add Expense';
+                    btn.style.backgroundColor = '';
+                    document.getElementById('cancelExpenseEditBtn').style.display = 'none';
+
                     await loadManagedData();
-                    alert('Expense added successfully!');
+                    alert(isEditing ? 'Expense updated successfully!' : 'Expense added successfully!');
                 } else {
-                    alert('Error adding expense');
+                    alert(isEditing ? 'Error updating expense' : 'Error adding expense');
                 }
             } catch (error) {
-                console.error('Error adding expense:', error);
-                alert('Error adding expense');
+                console.error('Error saving expense:', error);
+                alert('Error saving expense');
             }
         }
 
@@ -3033,8 +3518,209 @@
             }
         }
 
+        let editingExpenseId = null;
+
         function editManagedExpense(expenseId) {
-            alert('Edit functionality coming soon! For now, delete and re-add the expense.');
+            const expense = managedExpenses.find(e => e.id === expenseId);
+            if (!expense) return;
+
+            // Set edit mode
+            editingExpenseId = expenseId;
+
+            // Populate form fields
+            document.getElementById('manageExpenseName').value = expense.name;
+            document.getElementById('manageExpenseCategory').value = expense.category;
+            document.getElementById('manageExpenseType').value = expense.bucket_type || 'fixed';
+            document.getElementById('manageExpenseAmount').value = expense.monthly_amount;
+            document.getElementById('manageExpensePriority').value = expense.priority;
+            document.getElementById('manageExpenseDueDay').value = expense.due_day || 15;
+            document.getElementById('manageExpenseFrequency').value = expense.frequency || 'monthly';
+
+            // Update button
+            const btn = document.querySelector('button[onclick="addManagedExpense()"]');
+            btn.textContent = 'Update Expense';
+            btn.style.backgroundColor = '#ff9800';
+
+            // Show cancel button
+            document.getElementById('cancelExpenseEditBtn').style.display = 'block';
+
+            // Scroll to form
+            document.querySelector('#manageExpensesSection .btn-add').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function cancelExpenseEdit() {
+            // Reset edit mode
+            editingExpenseId = null;
+
+            // Clear form
+            document.getElementById('manageExpenseName').value = '';
+            document.getElementById('manageExpenseCategory').value = 'payroll';
+            document.getElementById('manageExpenseType').value = 'fixed';
+            document.getElementById('manageExpenseAmount').value = '';
+            document.getElementById('manageExpensePriority').value = 'important';
+            document.getElementById('manageExpenseDueDay').value = '15';
+            document.getElementById('manageExpenseFrequency').value = 'monthly';
+
+            // Reset button
+            const btn = document.querySelector('button[onclick="addManagedExpense()"]');
+            btn.textContent = '+ Add Expense';
+            btn.style.backgroundColor = '';
+
+            // Hide cancel button
+            document.getElementById('cancelExpenseEditBtn').style.display = 'none';
+        }
+
+        // ============================================================================
+        // OBLIGATIONS MANAGEMENT (Progressive Disclosure)
+        // ============================================================================
+
+        async function loadObligations() {
+            if (!currentUserId) return;
+
+            try {
+                const response = await authFetch(`${API_BASE}/data/obligations?user_id=${currentUserId}&active_only=true`);
+                if (response.ok) {
+                    managedObligations = await response.json();
+                    renderObligations();
+                } else {
+                    console.error('Error loading obligations');
+                }
+            } catch (error) {
+                console.error('Error loading obligations:', error);
+            }
+        }
+
+        function renderObligations() {
+            const list = document.getElementById('obligationsList');
+            if (!managedObligations || managedObligations.length === 0) {
+                list.innerHTML = `
+                    <div style="background: #f8f9fa; padding: 40px; text-align: center; border-radius: 8px; border: 2px dashed #ddd;">
+                        <p style="color: #666; margin: 0;">No obligations created yet.</p>
+                        <p style="color: #999; font-size: 14px; margin: 10px 0 0 0;">Use the form below to create your first obligation from an expense bucket.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Group by category
+            const byCategory = {};
+            managedObligations.forEach(obl => {
+                if (!byCategory[obl.category]) {
+                    byCategory[obl.category] = [];
+                }
+                byCategory[obl.category].push(obl);
+            });
+
+            list.innerHTML = Object.keys(byCategory).map(category => {
+                const obligations = byCategory[category];
+                const totalAmount = obligations.reduce((sum, o) => sum + parseFloat(o.base_amount || 0), 0);
+
+                return `
+                    <div style="margin-bottom: 25px; border: 2px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                        <div style="background: #667eea; color: white; padding: 15px; font-weight: 600;">
+                            ${category.toUpperCase()} - ${obligations.length} obligation(s) - Total: $${totalAmount.toLocaleString()}/${obligations[0].frequency}
+                        </div>
+                        <div style="padding: 15px;">
+                            ${obligations.map(obl => `
+                                <div class="card" style="margin-bottom: 10px;">
+                                    <div class="card-header">
+                                        <span class="card-title">${obl.vendor_name || 'Unnamed'}</span>
+                                        <button class="btn btn-remove" onclick="deleteObligation('${obl.id}')">Remove</button>
+                                    </div>
+                                    <div style="font-size: 14px; color: #666;">
+                                        <strong>${obl.obligation_type}</strong> •
+                                        ${obl.currency} $${parseFloat(obl.base_amount).toLocaleString()}/${obl.frequency} •
+                                        ${obl.amount_type} •
+                                        Confidence: ${obl.confidence}
+                                    </div>
+                                    ${obl.notes ? `<div style="font-size: 13px; color: #999; margin-top: 5px;">${obl.notes}</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function createObligation() {
+            const vendorName = document.getElementById('obligationVendorName').value;
+            const type = document.getElementById('obligationType').value;
+            const category = document.getElementById('obligationCategory').value;
+            const amountType = document.getElementById('obligationAmountType').value;
+            const amount = parseFloat(document.getElementById('obligationAmount').value);
+            const frequency = document.getElementById('obligationFrequency').value;
+            const currency = document.getElementById('obligationCurrency').value;
+            const startDate = document.getElementById('obligationStartDate').value;
+            const endDate = document.getElementById('obligationEndDate').value || null;
+            const notes = document.getElementById('obligationNotes').value;
+
+            if (!vendorName || !amount || !startDate) {
+                alert('Please fill in vendor name, amount, and start date');
+                return;
+            }
+
+            try {
+                const response = await authFetch(`${API_BASE}/data/obligations`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: currentUserId,
+                        obligation_type: type,
+                        amount_type: amountType,
+                        amount_source: 'manual_entry',
+                        base_amount: amount,
+                        currency: currency,
+                        frequency: frequency,
+                        start_date: startDate,
+                        end_date: endDate,
+                        category: category,
+                        confidence: amountType === 'fixed' ? 'high' : 'medium',
+                        vendor_name: vendorName,
+                        notes: notes || null
+                    })
+                });
+
+                if (response.ok) {
+                    // Clear form
+                    document.getElementById('obligationVendorName').value = '';
+                    document.getElementById('obligationAmount').value = '';
+                    document.getElementById('obligationStartDate').value = '';
+                    document.getElementById('obligationEndDate').value = '';
+                    document.getElementById('obligationNotes').value = '';
+
+                    // Reload obligations
+                    await loadObligations();
+                    alert('Obligation created successfully!');
+                } else {
+                    const error = await response.json();
+                    alert(`Error creating obligation: ${error.detail || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error creating obligation:', error);
+                alert('Error creating obligation');
+            }
+        }
+
+        async function deleteObligation(obligationId) {
+            if (!confirm('Are you sure you want to delete this obligation? This will also remove any associated schedules and payments.')) {
+                return;
+            }
+
+            try {
+                const response = await authFetch(`${API_BASE}/data/obligations/${obligationId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    await loadObligations();
+                    alert('Obligation deleted successfully!');
+                } else {
+                    alert('Error deleting obligation');
+                }
+            } catch (error) {
+                console.error('Error deleting obligation:', error);
+                alert('Error deleting obligation');
+            }
         }
 
         async function regenerateForecast() {
@@ -4018,7 +4704,7 @@
 
                 <div class="buttons" style="margin-top: 20px;">
                     <button class="btn btn-secondary" onclick="viewScenarioForecast('${scenario.id}')">View Full Forecast</button>
-                    <button class="btn btn-primary" onclick="confirmScenario('${scenario.id}')">✓ Confirm & Apply</button>
+                    <button class="btn btn-primary" onclick="saveScenario('${scenario.id}')">💾 Save Scenario</button>
                     <button class="btn" onclick="discardScenario('${scenario.id}')" style="background: #f44336; color: white;">✗ Discard</button>
                 </div>
             `;
@@ -4196,7 +4882,7 @@
                             Your base forecast breaches the buffer in Weeks ${baseBreachWeeks.join(', ')}, but <strong>this scenario keeps you above the $${bufferAmount.toLocaleString()} minimum</strong>.
                         </p>
                         <p style="margin: 0; font-weight: bold; color: #28a745;">
-                            Consider confirming this scenario to improve your cash position.
+                            Consider saving this scenario for future reference.
                         </p>
                     </div>
                 `;
@@ -4261,21 +4947,30 @@
             }
         }
 
-        async function confirmScenario(scenarioId) {
-            if (!confirm('Are you sure you want to apply this scenario? This will update your base forecast.')) {
-                return;
-            }
-
+        async function saveScenario(scenarioId) {
             try {
-                await fetch(`${API_BASE}/scenarios/scenarios/${scenarioId}/confirm`, {
+                const response = await fetch(`${API_BASE}/scenarios/scenarios/${scenarioId}/save`, {
                     method: 'POST'
                 });
 
-                alert('Scenario confirmed! Your forecast has been updated.');
-                location.reload();  // Reload to show updated forecast
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`Scenario "${data.scenario_name}" saved successfully! You can view it under Saved Scenarios.`);
+
+                    // Update scenario card to show "Saved" status
+                    const card = document.getElementById(`scenario-${scenarioId}`);
+                    if (card) {
+                        const saveBtnContainer = card.querySelector('.scenario-action-buttons');
+                        if (saveBtnContainer) {
+                            saveBtnContainer.innerHTML = '<span style="color: #4CAF50; font-weight: 600;">✓ Saved</span>';
+                        }
+                    }
+                } else {
+                    alert('Error saving scenario');
+                }
             } catch (error) {
-                console.error('Error confirming scenario:', error);
-                alert('Error confirming scenario: ' + error.message);
+                console.error('Error saving scenario:', error);
+                alert('Error saving scenario: ' + error.message);
             }
         }
 
@@ -4743,7 +5438,7 @@
 
                 <div class="buttons" style="margin-top: 20px;">
                     <button class="btn btn-secondary" onclick="viewScenarioForecast('${scenario.id}')">View Full Forecast</button>
-                    <button class="btn btn-primary" onclick="confirmScenario('${scenario.id}')">✓ Confirm & Apply</button>
+                    <button class="btn btn-primary" onclick="saveScenario('${scenario.id}')">💾 Save Scenario</button>
                     <button class="btn" onclick="discardScenario('${scenario.id}')" style="background: #f44336; color: white;">✗ Discard</button>
                 </div>
             `;
@@ -5014,17 +5709,17 @@
             }
         }
 
-        // Confirm scenario from banner
-        async function tamiConfirmScenario() {
+        // Save scenario from banner
+        async function tamiSaveScenario() {
             if (!tamiActiveScenarioId) return;
 
             try {
-                await confirmScenario(tamiActiveScenarioId);
+                await saveScenario(tamiActiveScenarioId);
                 tamiActiveScenarioId = null;
                 document.getElementById('scenarioBanner').classList.add('hidden');
-                addTamiMessage('Scenario confirmed and applied to your base forecast.', 'tami');
+                addTamiMessage('Scenario saved successfully! You can view it under Saved Scenarios. Your base forecast remains unchanged.', 'tami');
             } catch (error) {
-                addTamiMessage(`Error confirming scenario: ${error.message}`, 'tami');
+                addTamiMessage(`Error saving scenario: ${error.message}`, 'tami');
             }
         }
 

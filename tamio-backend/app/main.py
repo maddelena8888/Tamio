@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.auth import routes as auth_routes
 from app.data import routes as data_routes
+from app.data import obligation_routes
 from app.forecast import routes as forecast_routes
 from app.scenarios import routes as scenario_routes
 from app.scenarios.pipeline import routes as pipeline_routes
@@ -29,6 +30,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_routes.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["Auth"])
 app.include_router(data_routes.router, prefix=f"{settings.API_V1_PREFIX}/data", tags=["Data"])
+app.include_router(obligation_routes.router, prefix=f"{settings.API_V1_PREFIX}/data", tags=["Obligations"])
 app.include_router(forecast_routes.router, prefix=f"{settings.API_V1_PREFIX}/forecast", tags=["Forecast"])
 app.include_router(scenario_routes.router, prefix=f"{settings.API_V1_PREFIX}/scenarios", tags=["Scenarios"])
 app.include_router(pipeline_routes.router, prefix=f"{settings.API_V1_PREFIX}/scenarios", tags=["Scenario Pipeline"])

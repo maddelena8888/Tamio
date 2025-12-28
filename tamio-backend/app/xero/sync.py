@@ -13,6 +13,7 @@ from app.xero.client import XeroClient, get_valid_connection
 from app.xero.models import XeroConnection, XeroSyncLog
 from app.data import models as data_models
 from app.data.client_utils import build_canonical_client, update_client_billing_from_repeating_invoice
+from app.xero.categorization import get_category_from_line_items
 
 
 # ============================================================================
@@ -310,6 +311,14 @@ async def sync_invoices(
             else:
                 confidence = "low"
 
+            # Determine category based on account code (for expenses)
+            if is_receivable:
+                category = "client_invoice"
+            else:
+                # Use account code categorization for bills/expenses
+                line_items = invoice.get("line_items", [])
+                category = get_category_from_line_items(line_items)
+
             # Create cash event
             event = data_models.CashEvent(
                 user_id=user_id,
@@ -318,7 +327,7 @@ async def sync_invoices(
                 amount=Decimal(str(invoice["amount_due"])),
                 direction=direction,
                 event_type="expected_revenue" if is_receivable else "expected_expense",
-                category="client_invoice" if is_receivable else "vendor_bill",
+                category=category,
                 client_id=client_id,
                 confidence=confidence,
                 confidence_reason=f"Xero invoice {invoice.get('invoice_number', 'N/A')} - Status: {status}",

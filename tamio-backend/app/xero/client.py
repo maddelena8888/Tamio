@@ -549,3 +549,45 @@ class XeroClient:
             })
 
         return invoices
+
+    # -------------------------------------------------------------------------
+    # Chart of Accounts
+    # -------------------------------------------------------------------------
+
+    def get_chart_of_accounts(self) -> List[Dict[str, Any]]:
+        """
+        Get chart of accounts from Xero.
+
+        Returns account codes with their names, types, and classes
+        for categorizing expenses.
+        """
+        accounts = []
+
+        response = self.accounting_api.get_accounts(self.tenant_id)
+
+        for account in response.accounts or []:
+            # Convert enums to strings
+            account_type = account.type
+            if hasattr(account_type, 'value'):
+                account_type = account_type.value
+
+            account_class = account.account_class if hasattr(account, 'account_class') else None
+            if hasattr(account_class, 'value'):
+                account_class = account_class.value
+
+            status = account.status
+            if hasattr(status, 'value'):
+                status = status.value
+
+            accounts.append({
+                "account_id": account.account_id,
+                "code": account.code,
+                "name": account.name,
+                "type": account_type,  # BANK, EXPENSE, REVENUE, etc.
+                "account_class": account_class,  # EXPENSE, ASSET, LIABILITY, etc.
+                "status": status,
+                "description": account.description if hasattr(account, 'description') else None,
+                "tax_type": account.tax_type if hasattr(account, 'tax_type') else None,
+            })
+
+        return accounts

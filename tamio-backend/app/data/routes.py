@@ -388,15 +388,26 @@ async def complete_onboarding(
 ):
     """
     Complete full onboarding in one transaction.
-    Creates user, cash accounts, clients, and expense buckets.
+    Creates or uses existing user, then creates cash accounts, clients, and expense buckets.
     """
-    # Create user
-    user = models.User(
-        email=data.user.email,
-        base_currency=data.user.base_currency
+    # Check if user already exists (for authenticated onboarding)
+    result = await db.execute(
+        select(models.User).where(models.User.email == data.user.email)
     )
-    db.add(user)
-    await db.flush()  # Get user ID
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        # Create new user
+        user = models.User(
+            email=data.user.email,
+            base_currency=data.user.base_currency
+        )
+        db.add(user)
+        await db.flush()  # Get user ID
+    else:
+        # Use existing user - update base_currency if provided
+        if data.user.base_currency:
+            user.base_currency = data.user.base_currency
 
     # Create cash accounts
     accounts = []
@@ -449,6 +460,45 @@ async def complete_onboarding(
         db.add(bucket)
         buckets.append(bucket)
 
+    # Create ObligationAgreements from expense buckets
+    obligations = []
+    for bucket_data in data.expenses:
+        # Map category to obligation_type
+        obligation_type_map = {
+            "payroll": "payroll",
+            "rent": "lease",
+            "contractors": "contractor",
+            "software": "subscription",
+            "marketing": "other",
+            "other": "other",
+            "other_fixed": "other"
+        }
+
+        # Build notes with metadata
+        notes_parts = [f"Priority: {bucket_data.priority}"]
+        if bucket_data.employee_count:
+            notes_parts.append(f"Employees: {bucket_data.employee_count}")
+        if bucket_data.notes:
+            notes_parts.append(bucket_data.notes)
+
+        obligation = models.ObligationAgreement(
+            user_id=user.id,
+            obligation_type=obligation_type_map.get(bucket_data.category, "other"),
+            amount_type="fixed" if bucket_data.is_stable else "variable",
+            amount_source="manual_entry",
+            base_amount=bucket_data.monthly_amount,
+            currency=bucket_data.currency,
+            frequency=bucket_data.frequency,
+            start_date=date.today(),
+            end_date=None,  # Ongoing
+            category=bucket_data.category,
+            confidence="high" if bucket_data.is_stable else "medium",
+            vendor_name=bucket_data.name,
+            notes=" | ".join(notes_parts)
+        )
+        db.add(obligation)
+        obligations.append(obligation)
+
     await db.commit()
 
     # Refresh all objects
@@ -459,6 +509,8 @@ async def complete_onboarding(
         await db.refresh(client)
     for bucket in buckets:
         await db.refresh(bucket)
+    for obligation in obligations:
+        await db.refresh(obligation)
 
     # Generate events from clients and buckets
     total_events = 0

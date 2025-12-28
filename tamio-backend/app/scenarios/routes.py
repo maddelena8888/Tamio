@@ -286,12 +286,17 @@ async def add_scenario_layer(
     }
 
 
-@router.post("/scenarios/{scenario_id}/confirm")
-async def confirm_scenario(
+@router.post("/scenarios/{scenario_id}/save")
+async def save_scenario(
     scenario_id: str,
     db: AsyncSession = Depends(get_db)
 ):
-    """Confirm scenario - commit changes to reality."""
+    """
+    Save scenario for future reference.
+
+    Scenarios are exploratory models and NEVER modify the base forecast.
+    They remain as saved explorations that can be viewed and compared.
+    """
     result = await db.execute(
         select(models.Scenario).where(models.Scenario.id == scenario_id)
     )
@@ -299,73 +304,16 @@ async def confirm_scenario(
     if not scenario:
         raise HTTPException(status_code=404, detail="Scenario not found")
 
-    # Get scenario events
-    result = await db.execute(
-        select(models.ScenarioEvent).where(
-            models.ScenarioEvent.scenario_id == scenario_id
-        )
-    )
-    scenario_events = result.scalars().all()
-
-    # Apply changes to canonical data
-    from app.data.models import CashEvent
-    from datetime import date as date_type
-    from decimal import Decimal
-
-    def parse_date(d):
-        """Parse date from string or date object."""
-        if isinstance(d, str):
-            return date_type.fromisoformat(d)
-        return d
-
-    for sc_event in scenario_events:
-        if sc_event.operation == "add":
-            # Create new canonical event
-            event_data = sc_event.event_data
-            new_event = CashEvent(
-                user_id=scenario.user_id,
-                date=parse_date(event_data["date"]),
-                amount=Decimal(str(event_data["amount"])),
-                direction=event_data["direction"],
-                event_type=event_data["event_type"],
-                category=event_data["category"],
-                confidence=event_data.get("confidence", "medium"),
-                confidence_reason="scenario_confirmed",
-                is_recurring=event_data.get("is_recurring", False),
-                recurrence_pattern=event_data.get("recurrence_pattern"),
-                client_id=event_data.get("client_id"),
-                bucket_id=event_data.get("bucket_id"),
-            )
-            db.add(new_event)
-
-        elif sc_event.operation == "modify":
-            # Update canonical event
-            result = await db.execute(
-                select(CashEvent).where(CashEvent.id == sc_event.original_event_id)
-            )
-            event = result.scalar_one_or_none()
-            if event:
-                event_data = sc_event.event_data
-                event.date = parse_date(event_data["date"])
-                event.amount = Decimal(str(event_data["amount"]))
-                event.confidence = event_data.get("confidence")
-                event.confidence_reason = "scenario_confirmed"
-
-        elif sc_event.operation == "delete":
-            # Delete canonical event
-            await db.execute(
-                delete(CashEvent).where(CashEvent.id == sc_event.original_event_id)
-            )
-
-    # Mark scenario as confirmed
-    scenario.status = "confirmed"
-    scenario.confirmed_by = scenario.user_id
-    from datetime import datetime
-    scenario.confirmed_at = datetime.utcnow()
+    # Mark scenario as saved (for future viewing/comparison)
+    scenario.status = "saved"
 
     await db.commit()
 
-    return {"message": "Scenario confirmed and applied to base forecast"}
+    return {
+        "message": "Scenario saved successfully. It can be viewed under 'Saved Scenarios'.",
+        "scenario_id": scenario_id,
+        "scenario_name": scenario.name
+    }
 
 
 # ============================================================================
