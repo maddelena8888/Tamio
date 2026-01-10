@@ -13,6 +13,7 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { DemoBanner } from '@/components/DemoBanner';
 import {
   LayoutDashboard,
   Users,
@@ -121,7 +122,8 @@ export default function MainLayout() {
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset className="bg-gradient-ambient min-h-screen">
+      <SidebarInset className="bg-gradient-ambient min-h-screen flex flex-col">
+        <DemoBanner />
         <header className="flex h-14 items-center gap-2 px-4">
           <SidebarTrigger className="-ml-2" />
         </header>

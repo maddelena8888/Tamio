@@ -23,6 +23,7 @@ from app.tami.schemas import (
     CurrentScenarioContext,
     TriggeredScenarioSummary,
     BehaviorInsightsSummary,
+    BusinessProfileSummary,
 )
 
 
@@ -78,6 +79,16 @@ async def build_context(
     # Load behavior insights and triggered scenarios (Phase 4)
     behavior_insights, triggered_scenarios = await _load_behavior_context(db, user_id)
 
+    # Build business profile summary
+    business_profile = None
+    if user.industry or user.revenue_range:
+        business_profile = BusinessProfileSummary(
+            industry=user.industry,
+            subcategory=user.subcategory,
+            revenue_range=user.revenue_range,
+            base_currency=user.base_currency,
+        )
+
     # Build forecast weeks summary
     forecast_weeks = [
         ForecastWeekSummary(
@@ -110,6 +121,7 @@ async def build_context(
 
     return ContextPayload(
         user_id=user_id,
+        business_profile=business_profile,
         starting_cash=str(cash_position.get("balance", 0)),
         as_of_date=cash_position.get("as_of_date", date.today().isoformat()),
         base_forecast={
@@ -460,6 +472,24 @@ def context_to_json(context: ContextPayload) -> Dict[str, Any]:
 def format_context_for_prompt(context: ContextPayload) -> str:
     """Format context as a structured string for the prompt."""
     lines = []
+
+    # Business profile context
+    if context.business_profile:
+        bp = context.business_profile
+        lines.append("=== BUSINESS PROFILE ===")
+        industry_label = bp.industry.replace("_", " ").title() if bp.industry else "Unknown"
+        lines.append(f"Industry: {industry_label}")
+        if bp.subcategory:
+            subcategory_label = bp.subcategory.replace("_", " ").title()
+            lines.append(f"Subcategory: {subcategory_label}")
+        if bp.revenue_range:
+            lines.append(f"Revenue Range: ${bp.revenue_range}")
+        lines.append(f"Operating Currency: {bp.base_currency}")
+        lines.append("")
+        lines.append("Use this context to provide industry-specific insights and comparisons.")
+        lines.append("Reference typical payment terms for this industry when relevant.")
+        lines.append("")
+
     lines.append("=== CURRENT FINANCIAL STATE ===")
     lines.append(f"Starting Cash: ${context.starting_cash}")
     lines.append(f"As of Date: {context.as_of_date}")

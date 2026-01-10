@@ -20,9 +20,18 @@ class User(Base):
     base_currency = Column(String, nullable=False, default="USD")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
+    # Business profile fields
+    industry = Column(String, nullable=True)
+    subcategory = Column(String, nullable=True)
+    revenue_range = Column(String, nullable=True)
+    business_profile_completed_at = Column(DateTime(timezone=True), nullable=True)
+
     # Password reset fields
     password_reset_token = Column(String, nullable=True, index=True)
     password_reset_expires = Column(DateTime(timezone=True), nullable=True)
+
+    # Demo account flag
+    is_demo = Column(Boolean, nullable=False, default=False)
 
     # Relationships
     cash_accounts = relationship("CashAccount", back_populates="user", cascade="all, delete-orphan")

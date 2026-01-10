@@ -60,3 +60,12 @@ class Client(Base):
     # Relationships
     user = relationship("User", back_populates="clients")
     cash_events = relationship("CashEvent", back_populates="client", cascade="all, delete-orphan")
+
+    # One-to-Many: Client -> ObligationAgreement
+    # Each client can have multiple obligations (retainer, project milestones, usage fees, etc.)
+    obligations = relationship(
+        "ObligationAgreement",
+        back_populates="client",
+        cascade="all, delete-orphan",
+        foreign_keys="[ObligationAgreement.client_id]"
+    )

@@ -3,7 +3,29 @@
 // ============================================================================
 
 // Base Types
-export type Currency = 'USD' | 'EUR' | 'GBP' | 'AUD' | 'CAD';
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'AED' | 'AUD' | 'CAD' | 'CHF' | 'SGD' | 'JPY' | 'NZD';
+
+// Business Profile Types
+export type Industry =
+  | 'professional_services'
+  | 'construction'
+  | 'real_estate'
+  | 'healthcare'
+  | 'technology'
+  | 'creative'
+  | 'hospitality'
+  | 'manufacturing'
+  | 'other';
+
+export type ProfessionalSubcategory =
+  | 'marketing_agency'
+  | 'consulting'
+  | 'legal'
+  | 'accounting'
+  | 'design_agency'
+  | 'it_services';
+
+export type RevenueRange = '0-500k' | '500k-2m' | '2m-5m' | '5m-15m' | '15m+';
 export type ClientType = 'retainer' | 'project' | 'usage' | 'mixed';
 export type ClientStatus = 'active' | 'paused' | 'deleted';
 export type PaymentBehavior = 'on_time' | 'delayed' | 'unknown';
@@ -22,6 +44,26 @@ export interface User {
   company_name?: string;
   base_currency: Currency;
   has_completed_onboarding: boolean;
+  industry?: Industry;
+  subcategory?: ProfessionalSubcategory;
+  revenue_range?: RevenueRange;
+  business_profile_completed_at?: string;
+  is_demo?: boolean;
+}
+
+export interface BusinessProfileRequest {
+  industry: Industry;
+  subcategory?: ProfessionalSubcategory;
+  revenue_range: RevenueRange;
+  base_currency: Currency;
+}
+
+export interface BusinessProfileResponse {
+  industry: Industry | null;
+  subcategory: ProfessionalSubcategory | null;
+  revenue_range: RevenueRange | null;
+  base_currency: Currency;
+  is_complete: boolean;
 }
 
 export interface AuthResponse {
@@ -206,6 +248,7 @@ export interface ForecastEventSummary {
   category: string | null;
   confidence: ConfidenceLevel;
   confidence_reason?: string;
+  source_id?: string;
   source_name?: string;
   source_type?: string;
 }
@@ -521,6 +564,7 @@ export interface PaymentEvent {
 export interface ApiError {
   detail: string;
   status?: number;
+  is_demo?: boolean;
 }
 
 // =============================================================================

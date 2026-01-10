@@ -1,5 +1,5 @@
 """Expense Bucket model for cash outflows."""
-from sqlalchemy import Column, String, DateTime, Numeric, Boolean, Integer, Text, ForeignKey
+from sqlalchemy import Column, String, DateTime, Date, Numeric, Boolean, Integer, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -24,6 +24,14 @@ class ExpenseBucket(Base):
     # From Form
     monthly_amount = Column(Numeric(precision=15, scale=2), nullable=False)
     currency = Column(String, nullable=False, default="USD")
+
+    # Base currency normalization (for multi-currency forecasting)
+    # When expense currency differs from user's base currency, this stores
+    # the converted amount for easy aggregation in forecasts
+    base_currency_amount = Column(Numeric(precision=15, scale=2), nullable=True)
+    exchange_rate_used = Column(Numeric(precision=18, scale=8), nullable=True)
+    exchange_rate_date = Column(Date, nullable=True)
+
     priority = Column(String, nullable=False)  # "high" | "medium" | "low" or "essential" | "important" | "discretionary"
     is_stable = Column(Boolean, nullable=False, default=True)
 
@@ -63,3 +71,12 @@ class ExpenseBucket(Base):
     # Relationships
     user = relationship("User", back_populates="expense_buckets")
     cash_events = relationship("CashEvent", back_populates="expense_bucket", cascade="all, delete-orphan")
+
+    # One-to-Many: ExpenseBucket -> ObligationAgreement
+    # Each expense bucket can have multiple obligations
+    obligations = relationship(
+        "ObligationAgreement",
+        back_populates="expense_bucket",
+        cascade="all, delete-orphan",
+        foreign_keys="[ObligationAgreement.expense_bucket_id]"
+    )

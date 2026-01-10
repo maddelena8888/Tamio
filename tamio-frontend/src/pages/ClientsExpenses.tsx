@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { NeuroCard, NeuroCardContent, NeuroCardHeader, NeuroCardTitle } from '@/components/ui/neuro-card';
 import { Button } from '@/components/ui/button';
@@ -49,10 +50,12 @@ interface Milestone {
 
 export default function ClientsExpenses() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [clients, setClients] = useState<Client[]>([]);
   const [expenses, setExpenses] = useState<ExpenseBucket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('clients');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'clients');
+  const [highlightedId, setHighlightedId] = useState<string | null>(searchParams.get('highlight'));
 
   // Client form state
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
@@ -133,6 +136,25 @@ export default function ClientsExpenses() {
 
     fetchData();
   }, [user]);
+
+  // Handle URL params for highlighting
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const highlight = searchParams.get('highlight');
+
+    if (tab) {
+      setActiveTab(tab);
+    }
+    if (highlight) {
+      setHighlightedId(highlight);
+      // Clear highlight after animation and remove from URL
+      const timer = setTimeout(() => {
+        setHighlightedId(null);
+        setSearchParams({}, { replace: true });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, setSearchParams]);
 
   // Client handlers
   const handleOpenClientDialog = (client?: Client) => {
@@ -563,7 +585,14 @@ export default function ClientsExpenses() {
         <TabsContent value="clients" className="space-y-4">
 
           {sortedClients.map((client) => (
-            <NeuroCard key={client.id} className="p-4">
+            <NeuroCard
+              key={client.id}
+              className={`p-4 transition-all duration-500 ${
+                highlightedId === client.id
+                  ? 'ring-2 ring-lime-dark ring-offset-2 bg-lime-dark/5'
+                  : ''
+              }`}
+            >
               <div>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -814,7 +843,14 @@ export default function ClientsExpenses() {
         {/* Expenses Tab */}
         <TabsContent value="expenses" className="space-y-4">
           {sortedExpenses.map((expense) => (
-            <NeuroCard key={expense.id} className="p-4">
+            <NeuroCard
+              key={expense.id}
+              className={`p-4 transition-all duration-500 ${
+                highlightedId === expense.id
+                  ? 'ring-2 ring-tomato ring-offset-2 bg-tomato/5'
+                  : ''
+              }`}
+            >
               <div>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">

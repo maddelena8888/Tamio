@@ -40,9 +40,6 @@ import {
   LineChart,
   Line,
   ReferenceLine,
-  AreaChart,
-  Area,
-  ReferenceArea,
 } from 'recharts';
 import { Link } from 'react-router-dom';
 import {
@@ -50,7 +47,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
-import { TrendingUp, TrendingDown, Minus, Calendar, Info } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Calendar, Info, Clock } from 'lucide-react';
 import { getInsights } from '@/lib/api/insights';
 import type { InsightsResponse } from '@/lib/api/types';
 import {
@@ -59,6 +56,7 @@ import {
   GlassCardHeader,
   GlassCardTitle,
 } from '@/components/ui/glass-card';
+import { NeuroCard } from '@/components/ui/neuro-card';
 
 // Available months for concentration view
 const CONCENTRATION_MONTHS = [
@@ -212,10 +210,9 @@ export default function Insights() {
   // Burn momentum calculation (weekly change rate)
   const burnMomentum = ((bufferTrendData[7].buffer - bufferTrendData[0].buffer) / bufferTrendData[0].buffer) * 100;
 
-  // Reactive vs Deliberate - decisions made under buffer stress
-  const totalDecisions = 24;
-  const reactiveDecisions = 7;
-  const reactivePercent = Math.round((reactiveDecisions / totalDecisions) * 100);
+  // Reactive vs Deliberate - Coming Soon
+  // This feature will track actual user spending decisions and correlate them
+  // with buffer stress periods once activity tracking is implemented.
 
   // ============================================================================
   // TRIGGERED SCENARIOS - Auto-generated from behavior thresholds
@@ -279,125 +276,126 @@ export default function Insights() {
   const scoreStatus = getScoreStatus(currentScore);
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      {/* Health Score Section - Compact Layout: Chart Left, Insights Right */}
+    <div className="space-y-6">
+      {/* Header */}
+      <h1 className="text-2xl font-bold tracking-tight">Insights</h1>
+
+      {/* Health Score Section - Compact Layout: Progress Left, Insights Right */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Health Score Chart - Left Side */}
-        <GlassCard variant="solid" className="lg:col-span-2">
-          <GlassCardHeader className="pb-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <GlassCardTitle className="text-gunmetal">Health Score</GlassCardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">Cash flow health trend</p>
+        {/* Health Score Progress - Left Side */}
+        <NeuroCard className="lg:col-span-2 p-6">
+          {/* Header with badge */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 mb-0.5">Health Score</h2>
+              <p className="text-sm text-gray-600">Cash flow health</p>
+            </div>
+
+            {/* Status badge - glassmorphic */}
+            <div className={`px-3 py-1.5 rounded-full backdrop-blur-sm text-sm font-semibold ${
+              scoreStatus.label === 'Excellent' || scoreStatus.label === 'Healthy'
+                ? 'bg-lime/20 border border-lime/30 text-lime-700'
+                : scoreStatus.label === 'At Risk'
+                ? 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-700'
+                : 'bg-tomato/20 border border-tomato/30 text-tomato'
+            }`}>
+              {scoreStatus.label}
+            </div>
+          </div>
+
+          {/* Score display */}
+          <div className="text-center mb-4">
+            <span className="text-7xl font-bold text-gray-900">{currentScore}</span>
+            <span className="text-3xl font-bold text-gray-400">/100</span>
+          </div>
+
+          {/* Progress Bar - Compact */}
+          <div className="mb-5">
+            <div className="relative h-5 rounded-full overflow-hidden shadow-inner">
+              {/* Background zones */}
+              <div className="absolute inset-0 flex">
+                <div className="bg-gradient-to-r from-tomato/40 to-tomato/30" style={{ width: '40%' }} />
+                <div className="bg-gradient-to-r from-yellow-400/40 to-yellow-500/30" style={{ width: '20%' }} />
+                <div className="bg-gradient-to-r from-lime/40 to-lime/30" style={{ width: '20%' }} />
+                <div className="bg-gradient-to-r from-lime/30 to-lime/20" style={{ width: '20%' }} />
               </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-gunmetal">{currentScore}</span>
-                    <span className="text-sm text-muted-foreground">/100</span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <Badge className={`${scoreStatus.bgColor} ${scoreStatus.color} ${scoreStatus.borderColor} border text-xs`}>
-                    {scoreStatus.label}
-                  </Badge>
-                  {scoreTrend !== 0 && (
-                    <div className={`flex items-center gap-1 text-xs ${scoreTrend > 0 ? 'text-lime' : 'text-tomato'}`}>
-                      {scoreTrend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                      <span className="font-medium">{scoreTrend > 0 ? '+' : ''}{scoreTrend}</span>
-                    </div>
-                  )}
-                </div>
+
+              {/* Score indicator */}
+              <div
+                className="absolute w-5 h-5 bg-gray-900 rounded-full border-[3px] border-white shadow-lg transition-all duration-500"
+                style={{ left: `${currentScore}%`, top: '50%', transform: 'translate(-50%, -50%)' }}
+              />
+            </div>
+          </div>
+
+          {/* Bottom Metrics - Color-Coded Glassmorphic Cards */}
+          <div className="grid grid-cols-3 gap-3">
+            {/* Client Risk */}
+            <div className={`text-center p-3 rounded-xl bg-white/40 backdrop-blur-md border ${
+              clientConcentrationData[0]?.value > 40
+                ? 'border-tomato/30'
+                : 'border-lime/30'
+            }`}>
+              <div className="text-xs text-gray-600 mb-1">Client Risk</div>
+              <div className={`text-lg font-bold ${
+                clientConcentrationData[0]?.value > 40 ? 'text-tomato' : 'text-lime-700'
+              }`}>
+                {clientConcentrationData[0]?.value > 40 ? 'High' : 'Low'}
               </div>
             </div>
-          </GlassCardHeader>
-          <GlassCardContent className="pt-0">
-            <ChartContainer
-              config={{
-                score: { label: 'Health Score', color: '#112331' },
-              }}
-              className="h-[160px] w-full"
-            >
-              <AreaChart data={healthScoreTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="healthScoreGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#112331" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#112331" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-                <ReferenceArea y1={0} y2={40} fill="#FF4F3F" fillOpacity={0.08} />
-                <ReferenceArea y1={40} y2={60} fill="#F59E0B" fillOpacity={0.06} />
-                <ReferenceArea y1={60} y2={80} fill="#C5FF35" fillOpacity={0.08} />
-                <ReferenceArea y1={80} y2={100} fill="#C5FF35" fillOpacity={0.12} />
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                <XAxis
-                  dataKey="week"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: '#9ca3af' }}
-                  tickMargin={6}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: '#9ca3af' }}
-                  ticks={[0, 40, 60, 80, 100]}
-                  width={25}
-                />
-                <ChartTooltip
-                  cursor={{ stroke: '#112331', strokeWidth: 1, strokeDasharray: '4 4' }}
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
-                      const status = getScoreStatus(data.score);
-                      return (
-                        <div className="rounded-lg border bg-background p-2 shadow-xl">
-                          <p className="text-xs text-muted-foreground">{data.date}</p>
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-gunmetal">{data.score}</span>
-                            <Badge className={`${status.bgColor} ${status.color} text-xs`}>
-                              {status.label}
-                            </Badge>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="score"
-                  stroke="#112331"
-                  strokeWidth={2}
-                  fill="url(#healthScoreGradient)"
-                  dot={{ fill: '#112331', strokeWidth: 0, r: 3 }}
-                  activeDot={{ fill: '#112331', strokeWidth: 2, stroke: '#fff', r: 5 }}
-                />
-              </AreaChart>
-            </ChartContainer>
-            {/* Compact Legend */}
-            <div className="flex items-center justify-center gap-4 mt-2 pt-2 border-t border-gray-100">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-sm bg-tomato/20 border border-tomato/30" />
-                <span className="text-[10px] text-muted-foreground">Critical</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-sm bg-amber-100 border border-amber-200" />
-                <span className="text-[10px] text-muted-foreground">At Risk</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-sm bg-lime/20 border border-lime/30" />
-                <span className="text-[10px] text-muted-foreground">Healthy</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-sm bg-lime/30 border border-lime/40" />
-                <span className="text-[10px] text-muted-foreground">Excellent</span>
+
+            {/* Buffer */}
+            <div className={`text-center p-3 rounded-xl bg-white/40 backdrop-blur-md border ${
+              bufferIntegrity >= 80
+                ? 'border-lime/30'
+                : bufferIntegrity >= 50
+                ? 'border-yellow-500/30'
+                : 'border-tomato/30'
+            }`}>
+              <div className="text-xs text-gray-600 mb-1">Buffer</div>
+              <div className={`text-lg font-bold ${
+                bufferIntegrity >= 80
+                  ? 'text-lime-700'
+                  : bufferIntegrity >= 50
+                  ? 'text-yellow-700'
+                  : 'text-tomato'
+              }`}>
+                {bufferIntegrity}%
               </div>
             </div>
-          </GlassCardContent>
-        </GlassCard>
+
+            {/* Trend - shows actual trend data */}
+            <div className={`text-center p-3 rounded-xl bg-white/40 backdrop-blur-md border ${
+              scoreTrend > 0
+                ? 'border-lime/30'
+                : scoreTrend < 0
+                ? 'border-tomato/30'
+                : 'border-gray-200'
+            }`}>
+              <div className="text-xs text-gray-600 mb-1">Trend</div>
+              <div className={`text-lg font-bold flex items-center justify-center gap-1 ${
+                scoreTrend > 0
+                  ? 'text-lime-700'
+                  : scoreTrend < 0
+                  ? 'text-tomato'
+                  : 'text-gray-500'
+              }`}>
+                {scoreTrend !== 0 ? (
+                  <>
+                    {scoreTrend > 0 ? (
+                      <TrendingUp className="w-4 h-4" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4" />
+                    )}
+                    <span>{scoreTrend > 0 ? '+' : ''}{scoreTrend}</span>
+                  </>
+                ) : (
+                  <span>—</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </NeuroCard>
 
         {/* Right Side - Stacked Insights & Scenarios */}
         <div className="flex flex-col gap-4">
@@ -1097,56 +1095,29 @@ export default function Insights() {
 
           {/* Reactive vs Deliberate Decisions */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <GlassCard variant="solid">
+            <GlassCard variant="solid" className="opacity-75">
               <GlassCardHeader>
-                <GlassCardTitle className="text-gunmetal">
-                  Reactive vs Deliberate Decisions
-                </GlassCardTitle>
+                <div className="flex items-center justify-between">
+                  <GlassCardTitle className="text-gunmetal">
+                    Reactive vs Deliberate Decisions
+                  </GlassCardTitle>
+                  <span className="px-2 py-1 text-xs font-medium bg-mimi-pink/20 text-mimi-pink rounded-full">
+                    Coming Soon
+                  </span>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Spending decisions made under buffer stress (last 30 days)
+                  Track spending decisions made under buffer stress
                 </p>
               </GlassCardHeader>
               <GlassCardContent>
-                <div className="flex items-center justify-center py-6">
-                  <div className="relative">
-                    <svg className="w-40 h-40 transform -rotate-90">
-                      <circle
-                        cx="80"
-                        cy="80"
-                        r="70"
-                        stroke="#e5e7eb"
-                        strokeWidth="12"
-                        fill="none"
-                      />
-                      <circle
-                        cx="80"
-                        cy="80"
-                        r="70"
-                        stroke={reactivePercent > 30 ? '#f56565' : reactivePercent > 15 ? '#ecc94b' : '#c6f6d5'}
-                        strokeWidth="12"
-                        fill="none"
-                        strokeDasharray={`${(reactivePercent / 100) * 440} 440`}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className={`text-3xl font-bold ${reactivePercent > 30 ? 'text-tomato' : 'text-gunmetal'}`}>
-                        {reactivePercent}%
-                      </span>
-                      <span className="text-xs text-muted-foreground">reactive</span>
-                    </div>
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                    <Clock className="w-8 h-8 text-gray-400" />
                   </div>
+                  <p className="text-sm text-muted-foreground max-w-xs">
+                    This feature will analyze your spending patterns to identify decisions made under financial pressure versus planned expenses.
+                  </p>
                 </div>
-                <div className="text-center text-sm text-muted-foreground">
-                  {reactiveDecisions} of {totalDecisions} decisions made while buffer was below target
-                </div>
-                {reactivePercent > 30 && (
-                  <div className="mt-4 p-3 bg-tomato/10 rounded-lg">
-                    <p className="text-xs text-tomato">
-                      High reactive rate indicates spending under pressure. Consider pre-planning larger expenses.
-                    </p>
-                  </div>
-                )}
               </GlassCardContent>
             </GlassCard>
 

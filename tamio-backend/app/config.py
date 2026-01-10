@@ -40,6 +40,24 @@ class Settings(BaseSettings):
     # QuickBooks scope for accounting access
     QUICKBOOKS_SCOPES: str = "com.intuit.quickbooks.accounting"
 
+    # Demo Account
+    DEMO_TOKEN: str = "DEMO_TOKEN_2026"
+    DEMO_ACCOUNT_EMAIL: str = "maddy@elektra.ventures"
+
+    # ==========================================================================
+    # Feature Flags for Data Architecture Transition
+    # ==========================================================================
+    # Phase 1: Create obligations from clients/expenses (default: True)
+    USE_OBLIGATION_SYSTEM: bool = True
+
+    # Phase 2: Use obligations for forecast computation (default: False)
+    # When True, forecast engine reads from ObligationSchedule instead of Client/ExpenseBucket
+    USE_OBLIGATION_FOR_FORECAST: bool = False
+
+    # Phase 3: Stop generating legacy CashEvents (default: False)
+    # When True, only ObligationSchedule-based events are used
+    DEPRECATE_DIRECT_CASH_EVENTS: bool = False
+
     # CORS
     @property
     def ALLOWED_ORIGINS(self) -> List[str]:

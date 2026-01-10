@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
+from app.middleware import DemoGuardMiddleware
 from app.auth import routes as auth_routes
 from app.data import routes as data_routes
 from app.data.obligations import routes as obligation_routes
@@ -29,6 +30,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Demo account guard - blocks mutations for demo accounts
+# TODO: Re-enable before production deployment
+# app.add_middleware(DemoGuardMiddleware)
 
 # Include routers
 app.include_router(auth_routes.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["Auth"])

@@ -27,19 +27,13 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { AreaChart, Area, XAxis, YAxis, ReferenceLine, CartesianGrid } from 'recharts';
-import { AlertTriangle, ChevronDown, ChevronUp, Bot, User, Send, Shield, ShieldAlert, ShieldCheck, Info, Sparkles, MessageSquare } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp, Bot, User, Send, Shield, ShieldAlert, ShieldCheck, Info, Sparkles, MessageSquare, ArrowRight } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@/components/ui/hover-card';
-import { Progress } from '@/components/ui/progress';
 import { getForecast } from '@/lib/api/forecast';
 import { getCashPosition, getClients } from '@/lib/api/data';
 import { getScenarioSuggestions, getRules } from '@/lib/api/scenarios';
@@ -121,13 +115,15 @@ export default function Dashboard() {
     }
   }, [tamiMessages]);
 
-  // Calculate KPIs
-  const totalIncome30D = forecast?.weeks.slice(0, 4).reduce(
+  // Calculate KPIs - 30 days = approximately 4-5 weeks from today
+  // We use weeks 1-5 (skip week 0 which is just the starting position)
+  // to capture roughly 30 days of cash flow
+  const totalIncome30D = forecast?.weeks.slice(1, 6).reduce(
     (sum, week) => sum + parseFloat(week.cash_in || '0'),
     0
   ) || 0;
 
-  const totalExpenses30D = forecast?.weeks.slice(0, 4).reduce(
+  const totalExpenses30D = forecast?.weeks.slice(1, 6).reduce(
     (sum, week) => sum + parseFloat(week.cash_out || '0'),
     0
   ) || 0;
@@ -406,98 +402,102 @@ export default function Dashboard() {
             {forecast?.confidence && (
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={`h-7 gap-1.5 text-xs font-medium ${
+                  <button
+                    className={`flex items-center gap-2 rounded-full bg-white/40 backdrop-blur-md border border-white/20 px-4 py-2 hover:bg-white/50 hover:scale-105 transition-all ${
                       forecast.confidence.overall_level === 'high'
-                        ? 'border-green-500 text-green-600 hover:bg-green-50'
+                        ? 'text-lime-600'
                         : forecast.confidence.overall_level === 'medium'
-                        ? 'border-amber-500 text-amber-600 hover:bg-amber-50'
-                        : 'border-red-500 text-red-600 hover:bg-red-50'
+                        ? 'text-amber-600'
+                        : 'text-tomato'
                     }`}
                   >
                     {forecast.confidence.overall_level === 'high' ? (
-                      <ShieldCheck className="h-3.5 w-3.5" />
+                      <ShieldCheck className="h-4 w-4" />
                     ) : forecast.confidence.overall_level === 'medium' ? (
-                      <Shield className="h-3.5 w-3.5" />
+                      <Shield className="h-4 w-4" />
                     ) : (
-                      <ShieldAlert className="h-3.5 w-3.5" />
+                      <ShieldAlert className="h-4 w-4" />
                     )}
-                    {forecast.confidence.overall_percentage}% Confidence
-                  </Button>
+                    <span className="font-league-spartan font-semibold text-sm">
+                      {forecast.confidence.overall_percentage}% Confidence
+                    </span>
+                  </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80" align="start">
+                <PopoverContent
+                  className="w-80 rounded-2xl bg-white/60 backdrop-blur-xl border border-white/30 shadow-xl p-6 animate-in fade-in-0 zoom-in-95 duration-200"
+                  align="start"
+                  sideOffset={8}
+                >
                   <div className="space-y-4">
+                    {/* Header */}
                     <div>
-                      <h4 className="font-semibold text-sm mb-1">Forecast Confidence</h4>
-                      <p className="text-xs text-muted-foreground">
+                      <h4 className="font-league-spartan font-bold text-lg mb-1">Forecast Confidence</h4>
+                      <p className="text-sm text-gray-600">
                         Based on how well your data is backed by accounting software
                       </p>
                     </div>
 
-                    {/* Progress bar */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs">
-                        <span>Overall Score</span>
-                        <span className="font-medium">{forecast.confidence.overall_percentage}%</span>
+                    {/* Overall Score */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-league-spartan font-semibold">Overall Score</span>
+                        <span className="font-league-spartan font-bold text-lg">{forecast.confidence.overall_percentage}%</span>
                       </div>
-                      <Progress
-                        value={forecast.confidence.overall_percentage}
-                        className={`h-2 ${
-                          forecast.confidence.overall_level === 'high'
-                            ? '[&>div]:bg-green-500'
-                            : forecast.confidence.overall_level === 'medium'
-                            ? '[&>div]:bg-amber-500'
-                            : '[&>div]:bg-red-500'
-                        }`}
-                      />
+                      {/* Progress bar */}
+                      <div className="h-2 rounded-full bg-gray-200/60 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            forecast.confidence.overall_level === 'high'
+                              ? 'bg-gradient-to-r from-lime to-lime/80'
+                              : forecast.confidence.overall_level === 'medium'
+                              ? 'bg-gradient-to-r from-yellow-400 to-yellow-600'
+                              : 'bg-gradient-to-r from-tomato to-tomato/80'
+                          }`}
+                          style={{ width: `${forecast.confidence.overall_percentage}%` }}
+                        />
+                      </div>
                     </div>
 
-                    {/* Breakdown */}
-                    <div className="space-y-2 text-xs">
-                      <div className="flex items-center justify-between py-1.5 border-b">
+                    {/* Confidence Breakdown */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-green-500" />
+                          <div className="w-2 h-2 rounded-full bg-lime" />
                           <span>High confidence</span>
                         </div>
-                        <div className="text-right">
-                          <span className="font-medium">{forecast.confidence.breakdown.high_confidence_count}</span>
-                          <span className="text-muted-foreground ml-1">items</span>
-                        </div>
+                        <span className="font-semibold">{forecast.confidence.breakdown.high_confidence_count} items</span>
                       </div>
-                      <div className="flex items-center justify-between py-1.5 border-b">
+                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-amber-500" />
+                          <div className="w-2 h-2 rounded-full bg-yellow-500" />
                           <span>Medium confidence</span>
                         </div>
-                        <div className="text-right">
-                          <span className="font-medium">{forecast.confidence.breakdown.medium_confidence_count}</span>
-                          <span className="text-muted-foreground ml-1">items</span>
-                        </div>
+                        <span className="font-semibold">{forecast.confidence.breakdown.medium_confidence_count} items</span>
                       </div>
-                      <div className="flex items-center justify-between py-1.5">
+                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-red-500" />
+                          <div className="w-2 h-2 rounded-full bg-tomato" />
                           <span>Low confidence</span>
                         </div>
-                        <div className="text-right">
-                          <span className="font-medium">{forecast.confidence.breakdown.low_confidence_count}</span>
-                          <span className="text-muted-foreground ml-1">items</span>
-                        </div>
+                        <span className="font-semibold">{forecast.confidence.breakdown.low_confidence_count} items</span>
                       </div>
                     </div>
 
-                    {/* Suggestions */}
+                    {/* Recommendations */}
                     {forecast.confidence.improvement_suggestions.length > 0 && (
-                      <div className="pt-2 border-t">
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-xs font-medium">To improve confidence:</span>
+                      <div className="pt-3 border-t border-gray-200/40">
+                        <div className="flex items-start gap-2 mb-2">
+                          <Info className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                          <span className="font-league-spartan font-semibold text-sm">
+                            To improve confidence:
+                          </span>
                         </div>
-                        <ul className="text-xs text-muted-foreground space-y-1">
+                        <ul className="space-y-2 text-sm text-gray-700">
                           {forecast.confidence.improvement_suggestions.slice(0, 3).map((suggestion, i) => (
-                            <li key={i} className="leading-relaxed">• {suggestion}</li>
+                            <li key={i} className="flex items-start gap-2">
+                              <span className="text-gray-400">•</span>
+                              <span>{suggestion}</span>
+                            </li>
                           ))}
                         </ul>
                       </div>
@@ -507,80 +507,88 @@ export default function Dashboard() {
               </Popover>
             )}
           </div>
-          <HoverCard openDelay={200} closeDelay={100}>
-            <HoverCardTrigger asChild>
-              <Badge
-                variant={isBreach ? 'destructive' : isAtRisk ? 'secondary' : 'default'}
-                className={`cursor-pointer ${
+          <Popover>
+            <PopoverTrigger asChild>
+              <div
+                className={`cursor-pointer rounded-full backdrop-blur-sm px-4 py-2 border font-league-spartan font-semibold text-sm transition-all hover:scale-105 ${
                   isBreach
-                    ? 'bg-tomato text-white'
+                    ? 'bg-tomato/90 border-tomato/30 text-white'
                     : isAtRisk
-                    ? 'bg-mimi-pink text-foreground'
-                    : 'bg-lime text-foreground'
+                    ? 'bg-mimi-pink/90 border-mimi-pink/30 text-foreground'
+                    : 'bg-lime/90 border-lime/30 text-foreground'
                 }`}
               >
                 {isBreach ? 'Buffer Breach' : isAtRisk ? 'At Risk' : 'Cash Buffer Safe'}
-              </Badge>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="bottom" align="end" sideOffset={8}>
+              </div>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-80 rounded-2xl bg-white/60 backdrop-blur-xl border border-white/30 shadow-xl p-5 animate-in fade-in-0 zoom-in-95 duration-200"
+              side="bottom"
+              align="end"
+              sideOffset={8}
+            >
               <div className="space-y-3">
+                {/* Header */}
                 <div className="flex items-center gap-2">
-                  {isBreach ? (
-                    <ShieldAlert className="h-5 w-5 text-tomato" />
-                  ) : isAtRisk ? (
-                    <Shield className="h-5 w-5 text-mimi-pink" />
-                  ) : (
-                    <ShieldCheck className="h-5 w-5 text-lime" />
-                  )}
-                  <h4 className="font-semibold">
-                    {isBreach ? 'Cash Buffer Breach' : isAtRisk ? 'Cash Buffer At Risk' : 'Cash Buffer Healthy'}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    isBreach
+                      ? 'bg-tomato/20'
+                      : isAtRisk
+                      ? 'bg-mimi-pink/20'
+                      : 'bg-lime/20'
+                  }`}>
+                    {isBreach ? (
+                      <ShieldAlert className="h-4 w-4 text-tomato" />
+                    ) : isAtRisk ? (
+                      <Shield className="h-4 w-4 text-mimi-pink" />
+                    ) : (
+                      <ShieldCheck className="h-4 w-4 text-lime" />
+                    )}
+                  </div>
+                  <h4 className="font-league-spartan font-bold text-base">
+                    {isBreach ? 'Buffer Breach Alert' : isAtRisk ? 'Cash Buffer At Risk' : 'Cash Buffer Healthy'}
                   </h4>
                 </div>
 
+                {/* Stats */}
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Required Buffer:</span>
-                    <span className="font-medium">{formatCurrency(bufferAmount)}</span>
+                    <span className="text-gray-600">Required Buffer:</span>
+                    <span className="font-semibold">{formatCurrency(bufferAmount)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Lowest Balance:</span>
-                    <span className={`font-medium ${isBreach ? 'text-tomato' : isAtRisk ? 'text-mimi-pink' : ''}`}>
+                    <span className="text-gray-600">Lowest Balance:</span>
+                    <span className={`font-semibold ${isBreach ? 'text-tomato' : isAtRisk ? 'text-mimi-pink' : ''}`}>
                       {formatCurrency(lowestBalance)}
                     </span>
                   </div>
                   {forecast?.summary.lowest_cash_week && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Lowest Week:</span>
-                      <span className="font-medium">Week {forecast.summary.lowest_cash_week}</span>
+                      <span className="text-gray-600">Lowest Week:</span>
+                      <span className="font-semibold">Week {forecast.summary.lowest_cash_week}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Buffer Coverage:</span>
-                    <span className="font-medium">{bufferMonths} months</span>
+                    <span className="text-gray-600">Buffer Coverage:</span>
+                    <span className="font-semibold">{bufferMonths} months</span>
                   </div>
                 </div>
 
-                {(isBreach || isAtRisk) && (
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground">
-                      {isBreach
-                        ? `Your forecast shows cash dropping to ${formatCurrency(lowestBalance)}, which is below zero. Consider reducing expenses or accelerating revenue.`
-                        : `Your lowest projected balance of ${formatCurrency(lowestBalance)} is below your ${formatCurrency(bufferAmount)} buffer target. Consider building more runway.`
-                      }
-                    </p>
-                  </div>
-                )}
+                {/* Message */}
+                <div className="pt-2 border-t border-gray-200/40">
+                  <p className="text-sm text-gray-700">
+                    {isBreach
+                      ? `Your forecast shows cash dropping to ${formatCurrency(lowestBalance)}, which is below zero. Consider reducing expenses or accelerating revenue.`
+                      : isAtRisk
+                      ? `Your lowest projected balance of ${formatCurrency(lowestBalance)} is below your ${formatCurrency(bufferAmount)} buffer target. Consider building more runway.`
+                      : `Your cash position stays above the ${bufferMonths}-month buffer throughout the forecast period.`
+                    }
+                  </p>
+                </div>
 
-                {!isBreach && !isAtRisk && (
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground">
-                      Your cash position stays above the {bufferMonths}-month buffer throughout the forecast period.
-                    </p>
-                  </div>
-                )}
               </div>
-            </HoverCardContent>
-          </HoverCard>
+            </PopoverContent>
+          </Popover>
         </NeuroCardHeader>
         <NeuroCardContent>
           {chartData.length > 0 ? (
@@ -691,14 +699,9 @@ export default function Dashboard() {
       {allSuggestions.length > 0 && (
         <NeuroCard>
           <NeuroCardHeader className="pb-0">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-muted">
-                <AlertTriangle className="h-5 w-5 text-foreground" />
-              </div>
-              <div>
-                <NeuroCardTitle>Suggested Scenarios</NeuroCardTitle>
-                <p className="text-sm text-muted-foreground mt-0.5">Based on your risk profile</p>
-              </div>
+            <div>
+              <NeuroCardTitle>Suggested Scenarios</NeuroCardTitle>
+              <p className="text-sm text-muted-foreground mt-0.5">Based on your risk profile</p>
             </div>
           </NeuroCardHeader>
           <NeuroCardContent className="pt-4">
@@ -754,6 +757,16 @@ export default function Dashboard() {
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {suggestion.description}
                   </p>
+                  {/* Run Scenario Button - Shows on Hover */}
+                  <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      size="sm"
+                      className="w-full gap-2 bg-tomato hover:bg-tomato/90 text-white"
+                    >
+                      Run Scenario
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </NeuroCard>
               ))}
             </div>
@@ -772,7 +785,7 @@ export default function Dashboard() {
               <TableRow>
                 <TableHead className="w-[100px]">Week</TableHead>
                 <TableHead className="text-right">Starting</TableHead>
-                <TableHead className="text-right text-lime">Income</TableHead>
+                <TableHead className="text-right text-lime-dark">Income</TableHead>
                 <TableHead className="text-right text-tomato">Costs</TableHead>
                 <TableHead className="text-right">Ending</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
@@ -797,7 +810,7 @@ export default function Dashboard() {
                     <TableCell className="text-right">
                       {formatCurrency(parseFloat(week.starting_balance))}
                     </TableCell>
-                    <TableCell className="text-right text-lime">
+                    <TableCell className="text-right text-lime-dark">
                       +{formatCurrency(parseFloat(week.cash_in))}
                     </TableCell>
                     <TableCell className="text-right text-tomato">
@@ -821,20 +834,32 @@ export default function Dashboard() {
                           {week.events.map((event) => (
                             <div
                               key={event.id}
-                              className="flex items-center justify-between text-sm"
+                              className={`flex items-center justify-between text-sm ${
+                                event.source_id
+                                  ? 'cursor-pointer hover:bg-white/50 rounded-lg px-2 py-1 -mx-2 transition-colors'
+                                  : ''
+                              }`}
+                              onClick={() => {
+                                if (event.source_id && event.source_type) {
+                                  const tab = event.source_type === 'client' ? 'clients' : 'expenses';
+                                  navigate(`/clients?tab=${tab}&highlight=${event.source_id}`);
+                                }
+                              }}
                             >
                               <div className="flex items-center gap-2">
                                 <Badge
                                   variant="outline"
                                   className={
                                     event.direction === 'in'
-                                      ? 'border-lime/50 text-lime'
+                                      ? 'border-lime-dark/50 text-lime-dark'
                                       : 'border-tomato/50 text-tomato'
                                   }
                                 >
                                   {event.direction === 'in' ? 'IN' : 'OUT'}
                                 </Badge>
-                                <span>{event.category}</span>
+                                <span className={event.source_id ? 'underline decoration-dotted underline-offset-2' : ''}>
+                                  {event.source_name || event.category}
+                                </span>
                                 {event.confidence !== 'high' && (
                                   <Badge variant="secondary" className="text-xs">
                                     {event.confidence}
@@ -843,7 +868,7 @@ export default function Dashboard() {
                               </div>
                               <span
                                 className={
-                                  event.direction === 'in' ? 'text-lime' : 'text-tomato'
+                                  event.direction === 'in' ? 'text-lime-dark' : 'text-tomato'
                                 }
                               >
                                 {event.direction === 'in' ? '+' : '-'}

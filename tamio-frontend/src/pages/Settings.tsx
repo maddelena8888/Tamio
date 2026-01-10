@@ -47,6 +47,7 @@ import {
   type QuickBooksConnectionStatus,
 } from '@/lib/api/quickbooks';
 import { getRules, createRule, updateRule } from '@/lib/api/scenarios';
+import { changePassword } from '@/lib/api/auth';
 import type { XeroConnectionStatus, FinancialRule } from '@/lib/api/types';
 
 export default function Settings() {
@@ -63,6 +64,12 @@ export default function Settings() {
   const [bufferMonths, setBufferMonths] = useState('3');
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
   const [showDisconnectQBDialog, setShowDisconnectQBDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -211,6 +218,38 @@ export default function Settings() {
       setSyncMessage('Buffer rule updated successfully');
     } catch (error) {
       console.error('Failed to update buffer rule:', error);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      setSyncMessage('Password changed successfully');
+      setShowPasswordDialog(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to change password';
+      setPasswordError(errorMessage);
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -515,7 +554,83 @@ export default function Settings() {
             <Label className="text-gunmetal font-medium">Base Currency</Label>
             <Input value={user?.base_currency || 'USD'} disabled className="bg-white/60 backdrop-blur-sm border-white/30" />
           </div>
-          <div className="pt-4 border-t border-white/20">
+          <div className="pt-4 border-t border-white/20 flex gap-3">
+            <Dialog open={showPasswordDialog} onOpenChange={(open) => {
+              setShowPasswordDialog(open);
+              if (!open) {
+                setCurrentPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+                setPasswordError('');
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button className="rounded-full">
+                  Change Password
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Change Password</DialogTitle>
+                  <DialogDescription>
+                    Enter your current password and choose a new password.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  {passwordError && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>{passwordError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="current-password">Current Password</Label>
+                    <Input
+                      id="current-password"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Enter current password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">New Password</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleChangePassword} disabled={isChangingPassword}>
+                    {isChangingPassword ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Changing...
+                      </>
+                    ) : (
+                      'Change Password'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Button variant="destructive" onClick={logout} className="rounded-full">
               Sign Out
             </Button>

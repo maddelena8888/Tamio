@@ -207,10 +207,21 @@ class BehaviorInsightsSummary(BaseModel):
     top_concerns: List[str] = Field(default_factory=list)
 
 
+class BusinessProfileSummary(BaseModel):
+    """Business profile context for TAMI."""
+    industry: Optional[str] = None
+    subcategory: Optional[str] = None
+    revenue_range: Optional[str] = None
+    base_currency: str = "USD"
+
+
 class ContextPayload(BaseModel):
     """Deterministic context injected into Agent2."""
     # User info
     user_id: str
+
+    # Business profile
+    business_profile: Optional[BusinessProfileSummary] = None
 
     # Current cash position
     starting_cash: str

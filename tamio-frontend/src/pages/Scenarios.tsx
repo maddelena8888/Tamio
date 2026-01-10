@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -28,6 +27,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Users,
   UserPlus,
@@ -38,15 +39,14 @@ import {
   Building,
   X,
   Save,
+  CheckCircle2,
+  Link2,
   Bot,
   User,
   Send,
-  CheckCircle2,
-  Link2,
-  Sparkles,
-  AlertTriangle,
+  MessageCircle,
 } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import ReactMarkdown from 'react-markdown';
 import {
   getScenarios,
   getScenarioSuggestions,
@@ -73,7 +73,6 @@ import type {
   ChatMode,
   SuggestedAction,
 } from '@/lib/api/types';
-import ReactMarkdown from 'react-markdown';
 
 const scenarioTypeConfig: Record<ScenarioType, { label: string; icon: React.ElementType; description: string }> = {
   client_loss: { label: 'Client Loss', icon: UserMinus, description: 'Model losing a client' },
@@ -142,6 +141,7 @@ export default function Scenarios() {
   const [tamiMessages, setTamiMessages] = useState<TamiMessage[]>([]);
   const [tamiInput, setTamiInput] = useState('');
   const [isTamiLoading, setIsTamiLoading] = useState(false);
+  const [isTamiDialogOpen, setIsTamiDialogOpen] = useState(false);
   const tamiScrollRef = useRef<HTMLDivElement>(null);
   const tamiInputRef = useRef<HTMLInputElement>(null);
 
@@ -409,13 +409,6 @@ export default function Scenarios() {
     );
   };
 
-  const handleTamiKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleTamiSend();
-    }
-  };
-
   const getInferredClientAmount = (): string | null => {
     if (scenarioType !== 'client_loss' || !selectedClient) return null;
     const client = clients.find((c) => c.id === selectedClient);
@@ -532,6 +525,39 @@ export default function Scenarios() {
       }
     });
 
+    // Add default scenarios if we don't have enough
+    const defaultScenarios: ScenarioSuggestion[] = [
+      {
+        scenario_type: 'increased_expense',
+        name: 'Increase in operating costs',
+        description: 'Model a 10% increase in your monthly operating expenses.',
+        prefill_params: {},
+        priority: 'medium',
+      },
+      {
+        scenario_type: 'hiring',
+        name: 'New hire',
+        description: 'Model the impact of adding a new team member.',
+        prefill_params: {},
+        priority: 'low',
+      },
+      {
+        scenario_type: 'decreased_expense',
+        name: 'Reduce expenses by 15%',
+        description: 'Model cutting costs to improve runway.',
+        prefill_params: {},
+        priority: 'low',
+      },
+    ];
+
+    // Fill up to 3 scenarios with defaults if needed
+    while (generatedSuggestions.length < 3 && defaultScenarios.length > 0) {
+      const defaultScenario = defaultScenarios.shift();
+      if (defaultScenario && !generatedSuggestions.find(s => s.scenario_type === defaultScenario.scenario_type)) {
+        generatedSuggestions.push(defaultScenario);
+      }
+    }
+
     return generatedSuggestions.slice(0, 3); // Limit to 3 suggestions for TAMI sidebar
   };
 
@@ -587,7 +613,7 @@ export default function Scenarios() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <h1 className="text-2xl font-bold tracking-tight">SCENARIO ANALYSIS</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Scenario Analysis</h1>
 
       {/* Main Content - Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -779,95 +805,189 @@ export default function Scenarios() {
           </NeuroCard>
         </div>
 
-        {/* Right Column - TAMI Sidebar */}
-        <div className="lg:col-span-1">
-          <NeuroCard className="h-full flex flex-col overflow-hidden gap-0">
-            <NeuroCardHeader className="pb-3 border-b">
-              <NeuroCardTitle className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-lime">
-                  <Bot className="h-5 w-5 text-gunmetal" />
-                </div>
-                <div>
-                  <span className="block">TAMI</span>
-                  <span className="text-xs font-normal text-muted-foreground">
-                    {comparison ? 'Scenario Analysis' : 'Suggested Scenarios'}
-                  </span>
-                </div>
-              </NeuroCardTitle>
+        {/* Right Column - Suggested Scenarios Sidebar */}
+        <div className="lg:col-span-1 flex flex-col">
+          <NeuroCard className="flex-1">
+            <NeuroCardHeader className="pb-4">
+              <NeuroCardTitle>Suggested Scenarios</NeuroCardTitle>
             </NeuroCardHeader>
-            <NeuroCardContent className="flex-1 flex flex-col p-4 pt-4">
-              {/* Show scenario context when a scenario is running */}
-              {comparison ? (
-                <div className="space-y-3 mb-4">
-                  {/* Active Scenario Summary */}
-                  <div className="p-3 bg-lime/10 border border-lime/30 rounded-lg">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Active Scenario</p>
-                    <p className="font-medium text-sm">{scenarioName}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="outline" className="text-xs">
-                        {scenarioTypeConfig[scenarioType as ScenarioType]?.label}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${isBufferSafe ? 'bg-lime/20 border-lime/50' : 'bg-tomato/20 border-tomato/50'}`}
-                      >
-                        {isBufferSafe ? 'Safe' : 'At Risk'}
-                      </Badge>
+            <NeuroCardContent className="space-y-3">
+              {/* Show suggested scenarios - Elegant icon-free cards */}
+              {allSuggestions.slice(0, 3).map((suggestion, index) => {
+                const priority = suggestion.priority || 'medium';
+
+                // Risk level styling with coral for high risk
+                const riskStyles: Record<string, { gradient: string; border: string; badge: string; badgeText: string }> = {
+                  high: {
+                    gradient: 'from-[#FF4F3F]/10 via-[#FF4F3F]/5 to-transparent',
+                    border: 'border-l-4 border-l-[#FF4F3F]',
+                    badge: 'bg-[#FF4F3F]/10 border-[#FF4F3F]/30',
+                    badgeText: 'text-[#FF4F3F]',
+                  },
+                  medium: {
+                    gradient: 'from-yellow-400/10 via-yellow-500/5 to-transparent',
+                    border: 'border-l-4 border-l-yellow-500',
+                    badge: 'bg-yellow-500/10 border-yellow-500/30',
+                    badgeText: 'text-yellow-700',
+                  },
+                  low: {
+                    gradient: 'from-lime/10 via-lime/5 to-transparent',
+                    border: 'border-l-4 border-l-lime',
+                    badge: 'bg-lime/10 border-lime/30',
+                    badgeText: 'text-lime-700',
+                  },
+                };
+
+                const style = riskStyles[priority] || riskStyles.medium;
+
+                return (
+                  <div
+                    key={index}
+                    onClick={() => handleStartScenario(suggestion.scenario_type, suggestion)}
+                    className={`relative cursor-pointer min-h-[72px] bg-gradient-to-r ${style.gradient} backdrop-blur-sm ${style.border} rounded-lg p-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 group`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-heading font-bold text-base text-gray-900 mb-1 group-hover:text-[#FF4F3F] transition-colors">
+                          {suggestion.name}
+                        </h3>
+                        {suggestion.description && (
+                          <p className="text-xs text-gray-600 line-clamp-1">
+                            {suggestion.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Risk Badge */}
+                      <div className={`flex-shrink-0 px-2.5 py-1 rounded-md text-xs font-heading font-semibold border ${style.badge} ${style.badgeText}`}>
+                        {priority === 'high' ? 'High' : priority === 'medium' ? 'Medium' : 'Low'}
+                      </div>
+                    </div>
+
+                    {/* Hover Arrow Indicator */}
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
+                      <svg className="w-4 h-4 text-[#FF4F3F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
                   </div>
+                );
+              })}
 
-                  {/* Quick Questions */}
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Ask about this scenario</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start text-left h-auto py-2 px-3 text-xs"
-                      onClick={() => handleTamiSend('What is the impact of this scenario on my cash position?')}
-                    >
-                      What's the cash impact?
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start text-left h-auto py-2 px-3 text-xs"
-                      onClick={() => handleTamiSend('What actions should I take based on this scenario?')}
-                    >
-                      What actions should I take?
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start text-left h-auto py-2 px-3 text-xs"
-                      onClick={() => handleTamiSend('How does this affect my runway?')}
-                    >
-                      How does this affect runway?
-                    </Button>
+              {/* Chat with TAMI Button */}
+              <Dialog open={isTamiDialogOpen} onOpenChange={setIsTamiDialogOpen}>
+                <DialogTrigger asChild>
+                  <div className="cursor-pointer rounded-xl p-3 bg-lime/10 border border-lime/30 hover:bg-lime/20 transition-all mt-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-lime flex items-center justify-center">
+                        <MessageCircle className="h-4 w-4 text-gunmetal" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">Chat with TAMI</p>
+                        <p className="text-xs text-gray-500">Get help with scenarios</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                /* Show suggested scenarios when no scenario is running */
-                <div className="space-y-2 mb-4">
-                  {allSuggestions.slice(0, 3).map((suggestion, index) => {
-                    const Icon = suggestion.priority === 'high' ? AlertTriangle : Sparkles;
-                    return (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        className="w-full justify-start text-left h-auto py-3 px-4 gap-2 bg-lime/10 border-lime/30 hover:bg-lime/20 hover:border-lime transition-all"
-                        onClick={() => handleStartScenario(suggestion.scenario_type, suggestion)}
-                      >
-                        <Icon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                        <span className="text-sm truncate">{suggestion.name}</span>
-                      </Button>
-                    );
-                  })}
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0 gap-0">
+              <DialogHeader className="p-4 border-b">
+                <DialogTitle className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-lime flex items-center justify-center">
+                    <Bot className="h-5 w-5 text-gunmetal" />
+                  </div>
+                  <div>
+                    <span className="block">Chat with TAMI</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {comparison ? `Analyzing: ${scenarioName}` : 'Scenario Assistant'}
+                    </span>
+                  </div>
+                </DialogTitle>
+              </DialogHeader>
+
+              {/* Scenario Context Banner */}
+              {comparison && (
+                <div className="px-4 py-3 bg-lime/10 border-b border-lime/20">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Active Scenario</p>
+                  <p className="font-semibold text-sm">{scenarioName}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-xs">
+                      {scenarioTypeConfig[scenarioType as ScenarioType]?.label}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${isBufferSafe ? 'bg-lime/20 border-lime/50' : 'bg-tomato/20 border-tomato/50'}`}
+                    >
+                      {isBufferSafe ? 'Safe' : 'At Risk'}
+                    </Badge>
+                  </div>
                 </div>
               )}
 
               {/* Chat Messages */}
-              <ScrollArea className="flex-1 mb-3" ref={tamiScrollRef}>
-                {tamiMessages.length > 0 && (
+              <ScrollArea className="flex-1 p-4" ref={tamiScrollRef}>
+                {tamiMessages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                    <div className="w-12 h-12 rounded-full bg-lime/20 flex items-center justify-center mb-4">
+                      <Bot className="h-6 w-6 text-lime-700" />
+                    </div>
+                    <h3 className="font-semibold mb-1">How can I help?</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {comparison
+                        ? 'Ask me about this scenario\'s impact on your business.'
+                        : 'Ask me to help you explore scenarios or understand risks.'}
+                    </p>
+                    <div className="flex flex-col gap-2 w-full max-w-xs">
+                      {comparison ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => handleTamiSend('What is the cash impact of this scenario?')}
+                          >
+                            What's the cash impact?
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => handleTamiSend('What actions should I take?')}
+                          >
+                            What actions should I take?
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => handleTamiSend('How does this affect my runway?')}
+                          >
+                            How does this affect runway?
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => handleTamiSend('What scenarios should I run?')}
+                          >
+                            What scenarios should I run?
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => handleTamiSend('What are my biggest risks?')}
+                          >
+                            What are my biggest risks?
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
                   <div className="space-y-4">
                     {tamiMessages.map((message, index) => (
                       <div
@@ -903,25 +1023,6 @@ export default function Scenarios() {
                           ) : (
                             <p className="leading-relaxed">{message.content}</p>
                           )}
-                          {/* Suggested Actions */}
-                          {message.role === 'assistant' &&
-                            !message.isStreaming &&
-                            message.suggestedActions &&
-                            message.suggestedActions.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 mt-2">
-                                {message.suggestedActions.map((action, actionIndex) => (
-                                  <Button
-                                    key={actionIndex}
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 text-xs px-2"
-                                    onClick={() => handleTamiSend(action.label)}
-                                  >
-                                    {action.label}
-                                  </Button>
-                                ))}
-                              </div>
-                            )}
                         </div>
                         {message.role === 'user' && (
                           <Avatar className="h-7 w-7 border border-muted">
@@ -937,25 +1038,34 @@ export default function Scenarios() {
               </ScrollArea>
 
               {/* Chat Input */}
-              <div className="flex gap-2 mt-auto pt-3 border-t">
-                <Input
-                  ref={tamiInputRef}
-                  value={tamiInput}
-                  onChange={(e) => setTamiInput(e.target.value)}
-                  onKeyDown={handleTamiKeyDown}
-                  placeholder={comparison ? 'Ask about this scenario...' : 'Ask anything...'}
-                  disabled={isTamiLoading}
-                  className="flex-1 text-sm h-10 rounded-xl bg-background border-muted-foreground/20 focus:border-lime"
-                />
-                <Button
-                  size="icon"
-                  onClick={() => handleTamiSend()}
-                  disabled={!tamiInput.trim() || isTamiLoading}
-                  className="h-10 w-10 rounded-xl"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
+              <div className="p-4 border-t bg-muted/30">
+                <div className="flex gap-2">
+                  <Input
+                    ref={tamiInputRef}
+                    value={tamiInput}
+                    onChange={(e) => setTamiInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleTamiSend();
+                      }
+                    }}
+                    placeholder={comparison ? 'Ask about this scenario...' : 'Ask anything...'}
+                    disabled={isTamiLoading}
+                    className="flex-1 text-sm h-10 rounded-xl"
+                  />
+                  <Button
+                    size="icon"
+                    onClick={() => handleTamiSend()}
+                    disabled={!tamiInput.trim() || isTamiLoading}
+                    className="h-10 w-10 rounded-xl"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                  </div>
+                </div>
+                </DialogContent>
+              </Dialog>
             </NeuroCardContent>
           </NeuroCard>
         </div>
